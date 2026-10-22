@@ -7,8 +7,7 @@
   <img alt="ESP32-S3" src="https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white">
   <img alt="LVGL" src="https://img.shields.io/badge/UI-LVGL-8A2BE2?style=for-the-badge">
   <img alt="OBD2" src="https://img.shields.io/badge/OBD2-BLE-0078D4?style=for-the-badge">
-  <a href="https://github.com/ProfessorShroom/VentPuck/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Apache-blue?style=for-the-badge"></a>
-</p>
+<a href="https://github.com/ProfessorShroom/VentPuck/blob/main/LICENSE"><img alt="License" src="https://img.shields.io/badge/license-Personal_Use-blue?style=for-the-badge"></a>
 
 ## VentPuck
 
