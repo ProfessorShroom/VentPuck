@@ -1,0 +1,44 @@
+name: Update Copyright Year
+
+on:
+  schedule:
+    - cron: '0 2 1 1 *'
+  workflow_dispatch:
+
+jobs:
+  update-copyright:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Update copyright year in README.md and C/C++ files
+        run: |
+          START_YEAR=2026
+          CURRENT_YEAR=$(date +%Y)
+
+          # Single year in the first year, a range after that
+          if [ "$CURRENT_YEAR" = "$START_YEAR" ]; then
+            RANGE="$START_YEAR"
+          else
+            RANGE="$START_YEAR-$CURRENT_YEAR"
+          fi
+
+          # 1. README.md: handles "2026" or "2026-YYYY" and strips any trailing period
+          sed -i -E "s/Copyright © Charlie Howard 2026(-[0-9]{4})?\.?/Copyright © Charlie Howard $RANGE/g" README.md
+
+          # 2. C/C++ source files: same, for "// Copyright ..." header comments
+          find . -type f \( -name "*.cpp" -o -name "*.h" -o -name "*.hpp" -o -name "*.c" -o -name "*.ino" \) \
+            -not -path "./.git/*" -not -path "./.pio/*" \
+            -exec sed -i -E "s#//\s*Copyright © Charlie Howard 2026(-[0-9]{4})? All rights reserved\.?#// Copyright © Charlie Howard $RANGE All rights reserved#g" {} +
+
+      - name: Commit and push changes
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -u
+          # Only commit if changes were actually made
+          git diff --staged --quiet || (git commit -m "Update copyright year range to $(date +%Y)" && git push)

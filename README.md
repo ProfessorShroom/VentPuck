@@ -31,7 +31,7 @@ This is an early work in progress, so there's nothing to download yet.
 ### Hardware
 
 - **Display / controller** - an ESP32-S3 board with a 1.85" 360x360 round capacitive touch display
-- **OBD2 adapter** - a Bluetooth **LE** ELM327-style adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work
+- **OBD2 adapter** - any Bluetooth OBD2 adapter that supports **BLE** ELM327-style adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work. I used the OBDLink CX as it supports a sleep function to reduce power drain when the car is parked for longer than a few days, but the cheaper ones will work fine.
 - **Power** - 12 V to 5 V buck converter on a switched fuse tap, so the gauge turns on and off with the ignition
 
 ### Status
