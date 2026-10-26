@@ -13,9 +13,9 @@
 
 **_Copyright © Charlie Howard 2026 All rights reserved_**
 
-A small round touch-screen gauge for your car's air vent. It reads live data from the OBD2 port over Bluetooth LE and shows it on a 1.85" round display, running on an ESP32-S3.
+A small round touch-screen gauge for your car's air vent. It reads live data from the OBD2 port over Bluetooth LE and shows it on a 1.75 inch AMOLED round display, running on an ESP32-S3.
 
-Built for my Renault Megane RS (Mk3), but the car-specific parts are kept in a profile file so it can be adapted to other cars.
+Built for my Renault Megane RS 250, but the car-specific parts are kept in a profile file so it can be adapted to other cars.
 
 This is an early work in progress, so there's nothing to download yet.
 
@@ -23,21 +23,14 @@ This is an early work in progress, so there's nothing to download yet.
 
 - One big main reading, swipe left/right to change it
 - Oil and coolant temperature always shown at the bottom
-- Main readings: coolant temp, oil temp, boost, RPM, speed and battery voltage
-- Planned extras: intake air temp, engine load, peak boost hold, G-meter (the board has a built-in accelerometer) and reading/clearing fault codes
+- Main readings: coolant temperature, oil temperature, boost (with peak boost), RPM, speed, battery voltage, 0-60 timer, reading and clearing DTC codes and intake air temperature.
 - Car-specific PIDs, gauge ranges and warning colours live in a profile file
 
 ### Hardware
 
-- **Display / controller** - an ESP32-S3 board with a 1.85" 360x360 round capacitive touch display
+- **Display / controller** - an ESP32-S3 board with a 1.75 inch AMOLED 466x466 round capacitive touch display.
 - **OBD2 adapter** - any Bluetooth OBD2 adapter that supports **BLE** ELM327-style adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work. I used the OBDLink CX as it supports a sleep function to reduce power drain when the car is parked for longer than a few days, but the cheaper ones will work fine.
-- **Power** - 12 V to 5 V buck converter on a switched fuse tap, so the gauge turns on and off with the ignition
-
-### Status
-
-The standard readings (coolant, boost, RPM, speed, voltage) work on any OBD2 car, with boost worked out from MAP minus barometric pressure.
-
-Oil temperature isn't a standard PID on Renaults, so I'm still working out the right request for the Megane RS ECU.
+- **Power** - 12 V to 5 V buck converter on a switched fuse tap, so the gauge turns on and off with the ignition. You could also use a USB C cable plugged in to the 12v socket like a phone charger, but this is a lot less neat.
 
 ### Changelog
 
@@ -45,4 +38,4 @@ Oil temperature isn't a standard PID on Renaults, so I'm still working out the r
 
 **Version 1.0.0**
 
-- **_1.0.0_** Initial commit: project name, logo and README.
+- Initial commit.
