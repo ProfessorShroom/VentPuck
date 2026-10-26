@@ -21,10 +21,10 @@ This is an early work in progress, so there's nothing to download yet.
 
 ### Features
 
-- One big main reading, swipe left/right to change it
-- Oil and coolant temperature always shown at the bottom
+- One big main reading, swipe left/right to change it.
+- Oil and coolant temperature always shown at the bottom.
 - Main readings: coolant temperature, oil temperature, boost (with peak boost), RPM, speed, battery voltage, 0-60 timer, reading and clearing DTC codes and intake air temperature.
-- Car-specific PIDs, gauge ranges and warning colours live in a profile file
+- Car-specific PIDs, gauge ranges and warning colours live in a profile file.
 
 ### Hardware
 
@@ -35,7 +35,3 @@ This is an early work in progress, so there's nothing to download yet.
 ### Changelog
 
 #### Latest Update
-
-**Version 1.0.0**
-
-- Initial commit.
