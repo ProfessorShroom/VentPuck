@@ -77,8 +77,28 @@ static void parseHomeItems(String val) {
   }
 }
 
-static const char* SETTING_KEYS[] = {"update", "ssid", "password", "colour1", "colour2", "speed_unit", "boost_unit",
+static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
                                      "temp_unit", "brightness", "boot_animation", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent"};
+
+static bool wifiKey(const String& k, int* slot, bool* isPassword) {
+  String rest;
+  if (k.startsWith("ssid")) {
+    *isPassword = false;
+    rest = k.substring(4);
+  } else if (k.startsWith("password")) {
+    *isPassword = true;
+    rest = k.substring(8);
+  } else {
+    return false;
+  }
+  if (rest.length() == 0) {
+    *slot = 0;
+    return true;
+  }
+  if (rest.length() != 1 || rest[0] < '2' || rest[0] > '0' + WIFI_SLOTS) return false;
+  *slot = rest[0] - '1';
+  return true;
+}
 
 static String iniValue(const char* key) {
   String k = key;
@@ -86,8 +106,9 @@ static String iniValue(const char* key) {
   if (k == "update") return g_settings.update ? "true" : "false";
   if (k == "update_channel") return g_settings.updateChannel;
   if (k == "accent") return g_settings.accent;
-  if (k == "ssid") return g_settings.ssid;
-  if (k == "password") return g_settings.password;
+  int wifiSlot;
+  bool wifiPw;
+  if (wifiKey(k, &wifiSlot, &wifiPw)) return wifiPw ? g_settings.wifiPassword[wifiSlot] : g_settings.wifiSsid[wifiSlot];
   if (k == "colour1") {
     snprintf(buf, sizeof buf, "#%06X", (unsigned)g_settings.colour1);
     return String(buf);
@@ -111,11 +132,27 @@ static String iniValue(const char* key) {
   return "";
 }
 
+int wifiCount() {
+  int n = 0;
+  for (int i = 0; i < WIFI_SLOTS; i++) {
+    if (g_settings.wifiSsid[i].length() > 0) n++;
+  }
+  return n;
+}
+
 static void applyKey(String key, String val) {
   key.trim();
   key.toLowerCase();
   val.trim();
   if (val.length() >= 2 && val.startsWith("\"") && val.endsWith("\"")) val = val.substring(1, val.length() - 1);
+
+  int wifiSlot;
+  bool wifiPw;
+  if (wifiKey(key, &wifiSlot, &wifiPw)) {
+    if (wifiPw) g_settings.wifiPassword[wifiSlot] = val;
+    else g_settings.wifiSsid[wifiSlot] = val;
+    return;
+  }
 
   if (key == "update") {
     g_settings.update = parseBool(val, false);
@@ -128,10 +165,6 @@ static void applyKey(String key, String val) {
   } else if (key == "update_channel") {
     val.toLowerCase();
     if (val == "release" || val == "beta") g_settings.updateChannel = val;
-  } else if (key == "ssid") {
-    g_settings.ssid = val;
-  } else if (key == "password") {
-    g_settings.password = val;
   } else if (key == "colour1" || key == "color1") {
     if (!parseColour(val, g_settings.colour1)) Serial.printf("Settings: bad colour1 '%s', keeping default\n", val.c_str());
   } else if (key == "colour2" || key == "color2") {
@@ -196,8 +229,17 @@ static bool writeIni() {
   f.print("# Updates (Wi-Fi is only used to check for updates). update_channel is release or beta, and beta builds may be unstable\n");
   f.printf("update=%s\n", iniValue("update").c_str());
   f.printf("update_channel=%s\n", iniValue("update_channel").c_str());
+  f.print("# Up to 5 Wi-Fi networks, and it joins the strongest one it can see\n");
   f.printf("ssid=%s\n", iniValue("ssid").c_str());
-  f.printf("password=%s\n\n", iniValue("password").c_str());
+  f.printf("password=%s\n", iniValue("password").c_str());
+  for (int i = 2; i <= WIFI_SLOTS; i++) {
+    char key[16];
+    snprintf(key, sizeof key, "ssid%d", i);
+    f.printf("%s=%s\n", key, iniValue(key).c_str());
+    snprintf(key, sizeof key, "password%d", i);
+    f.printf("%s=%s\n", key, iniValue(key).c_str());
+  }
+  f.print("\n");
   f.print("# Dial gradient as hex #RRGGBB: colour1 = outer edge, colour2 = middle\n");
   f.printf("colour1=%s\n", iniValue("colour1").c_str());
   f.printf("colour2=%s\n\n", iniValue("colour2").c_str());
@@ -288,8 +330,8 @@ void settingsInit() {
     else if (writeIni()) Serial.println("Settings: no settings.ini found, created one on the card");
     loadLogo();
   }
-  Serial.printf("Settings: vehicle=%s update=%d ssid='%s' colour1=#%06X colour2=#%06X units=%s/%s/%s brightness=%d boot_animation=%d\n",
-                g_settings.vehicle.c_str(), g_settings.update, g_settings.ssid.c_str(), (unsigned)g_settings.colour1,
+  Serial.printf("Settings: vehicle=%s update=%d wifi=%d colour1=#%06X colour2=#%06X units=%s/%s/%s brightness=%d boot_animation=%d\n",
+                g_settings.vehicle.c_str(), g_settings.update, wifiCount(), (unsigned)g_settings.colour1,
                 (unsigned)g_settings.colour2, g_settings.speedUnit.c_str(), g_settings.boostUnit.c_str(),
                 g_settings.tempUnit.c_str(), g_settings.brightness, g_settings.bootAnimation);
   Serial.printf("Settings: start_screen=%s home_items=%s\n", g_settings.startScreen.c_str(), iniValue("home_items").c_str());

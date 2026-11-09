@@ -2,6 +2,7 @@
 #include "updater.h"
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiMulti.h>
 #include <HTTPClient.h>
 #include <NetworkClientSecure.h>
 #include <Update.h>
@@ -108,15 +109,15 @@ static void radioOff() {
   WiFi.mode(WIFI_OFF);
 }
 
-static bool connectWifi(uint32_t timeoutMs) {
+static bool connectWifi(uint32_t perNetworkMs) {
   WiFi.mode(WIFI_STA);
-  WiFi.begin(g_settings.ssid.c_str(), g_settings.password.c_str());
-  uint32_t t0 = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < timeoutMs) {
-    displayLoop();
-    delay(50);
+  WiFiMulti multi;
+  for (int i = 0; i < WIFI_SLOTS; i++) {
+    if (g_settings.wifiSsid[i].length() > 0) multi.addAP(g_settings.wifiSsid[i].c_str(), g_settings.wifiPassword[i].c_str());
   }
-  return WiFi.status() == WL_CONNECTED;
+  bool ok = multi.run(perNetworkMs) == WL_CONNECTED;
+  if (ok) Serial.printf("Update: joined '%s'\n", WiFi.SSID().c_str());
+  return ok;
 }
 
 static bool syncClock() {
@@ -346,7 +347,7 @@ void updaterBoot() {
   if (!forced && !g_settings.update) return;
   if (forced) uiOpen();
   const char* error = nullptr;
-  if (g_settings.ssid.length() == 0) {
+  if (wifiCount() == 0) {
     if (forced) {
       uiShow("UPDATES", "No Wi-Fi set. Add ssid and password to settings.ini on the SD card.", -1);
       pumpFor(4000);
@@ -354,10 +355,10 @@ void updaterBoot() {
     uiClose();
     return;
   }
-  Serial.printf("Update: running %s, channel %s, connecting to '%s'\n", FW_VERSION, g_settings.updateChannel.c_str(),
-                g_settings.ssid.c_str());
+  Serial.printf("Update: running %s, channel %s, %d Wi-Fi network(s) set\n", FW_VERSION, g_settings.updateChannel.c_str(),
+                wifiCount());
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
-  if (!connectWifi(forced ? 15000 : 12000)) {
+  if (!connectWifi(forced ? 12000 : 10000)) {
     Serial.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
