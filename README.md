@@ -43,6 +43,8 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 | Setting | Car | What you get |
 | --- | --- | --- |
 | Megane 3 RS | Renault Megane 3 RS (F4Rt) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
+| Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
+| Megane 4 RS | Renault Megane 4 RS (XFB) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings for now, BMW specific readings to come. |
 | Generic | Any car with OBD2 | Standard OBD2 readings only, so some screens such as oil temperature may show nothing. |
 
@@ -83,11 +85,12 @@ home_items=oil,coolant,boost,rpm
 brightness=80
 boot_animation=true
 dark_mode=false
+accent=purple
 ```
 
 | Key | Values |
 | --- | --- |
-| `vehicle` | `generic`, `meganers3`, `bmwe8x` |
+| `vehicle` | `generic`, `meganers3`, `clio4rs`, `megane4rs`, `bmwe8x` |
 | `update` | `true` or `false`, whether to check for updates when it starts |
 | `update_channel` | `release` or `beta` |
 | `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
@@ -100,6 +103,7 @@ dark_mode=false
 | `brightness` | 5 to 100 |
 | `boot_animation` | `true` or `false` |
 | `dark_mode` | `true` or `false` |
+| `accent` | Dark mode accent colour: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink` or `white` |
 
 The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check for updates.
 

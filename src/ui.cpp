@@ -538,6 +538,8 @@ static void capitalise(char* s) {
 
 static const char* vehicleLabel() {
   if (g_settings.vehicle == "meganers3") return "Megane 3 RS";
+  if (g_settings.vehicle == "clio4rs") return "Clio 4 RS";
+  if (g_settings.vehicle == "megane4rs") return "Megane 4 RS";
   if (g_settings.vehicle == "bmwe8x") return "BMW E8x";
   return "Generic";
 }
@@ -756,7 +758,9 @@ static void menuClick(lv_event_t* e) {
   }
   if (id == 1) {
     if (g_settings.vehicle == "generic") g_settings.vehicle = "meganers3";
-    else if (g_settings.vehicle == "meganers3") g_settings.vehicle = "bmwe8x";
+    else if (g_settings.vehicle == "meganers3") g_settings.vehicle = "clio4rs";
+    else if (g_settings.vehicle == "clio4rs") g_settings.vehicle = "megane4rs";
+    else if (g_settings.vehicle == "megane4rs") g_settings.vehicle = "bmwe8x";
     else g_settings.vehicle = "generic";
   } else if (id == 2) {
     g_settings.speedUnit = g_settings.speedUnit == "mph" ? "kph" : "mph";

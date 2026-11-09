@@ -188,7 +188,7 @@ static void applyKey(String key, String val) {
   } else if (key == "vehicle") {
     val.toLowerCase();
     if (val == "renault") val = "meganers3";
-    if (val == "generic" || val == "meganers3" || val == "bmwe8x") g_settings.vehicle = val;
+    if (val == "generic" || val == "meganers3" || val == "clio4rs" || val == "megane4rs" || val == "bmwe8x") g_settings.vehicle = val;
   } else if (key == "start_screen") {
     val.toLowerCase();
     if (val == "last" || val == "home" || val == "zerosixty" || val == "faults" || metricKeyValid(val)) g_settings.startScreen = val;
@@ -224,7 +224,7 @@ static bool writeIni() {
   f.print("# VentPuck settings. All optional, and missing values use the defaults.\n");
   f.print("# Comments must be on their own line, because hex colours start with #.\n");
   f.print("# These can also be changed from the on-screen menu: press and hold on any screen.\n\n");
-  f.print("# Vehicle: meganers3 (Renault Megane RS Mk3, adds engine ECU readings such as oil temp), bmwe8x (BMW 1 Series E8x, standard OBD for now) or generic (standard OBD only)\n");
+  f.print("# Vehicle: meganers3 (Renault Megane RS Mk3), clio4rs (Renault Clio RS Mk4), megane4rs (Renault Megane RS Mk4) - all three add engine ECU readings such as oil temp, bmwe8x (BMW 1 Series E8x, standard OBD for now) or generic (standard OBD only)\n");
   f.printf("vehicle=%s\n\n", iniValue("vehicle").c_str());
   f.print("# Updates (Wi-Fi is only used to check for updates). update_channel is release or beta, and beta builds may be unstable\n");
   f.printf("update=%s\n", iniValue("update").c_str());

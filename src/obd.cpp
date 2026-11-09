@@ -535,7 +535,7 @@ static void probe() {
       Serial.printf("  %-18s (01%02X): supported, but no usable reply\n", k.name, k.pid);
     }
   }
-  if (g_settings.vehicle == "meganers3") probeRenault();
+  if (g_settings.vehicle == "meganers3" || g_settings.vehicle == "clio4rs" || g_settings.vehicle == "megane4rs") probeRenault();
   if (g_settings.vehicle == "bmwe8x") probeBmw();
   printSummary();
   if (supported[0x0D]) speedRate(3000);
