@@ -9,6 +9,7 @@
 #include <ArduinoJson.h>
 #include <time.h>
 #include "mbedtls/sha256.h"
+#include "esp_heap_caps.h"
 #include "lvgl.h"
 #include "settings.h"
 #include "display.h"
@@ -152,6 +153,34 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
     http.end();
     return false;
   }
+  int bodyLen = http.getSize();
+  const size_t cap = 262144;
+  uint8_t* body = (uint8_t*)heap_caps_malloc(cap + 1, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
+  if (!body) {
+    http.end();
+    *error = "Out of memory";
+    return false;
+  }
+  NetworkClient* stream = http.getStreamPtr();
+  size_t got = 0;
+  uint32_t lastData = millis();
+  while (got < cap) {
+    size_t avail = stream->available();
+    if (avail) {
+      size_t want = cap - got;
+      size_t n = stream->readBytes(body + got, avail > want ? want : avail);
+      got += n;
+      lastData = millis();
+      if (bodyLen > 0 && got >= (size_t)bodyLen) break;
+    } else {
+      if (!stream->connected()) break;
+      if (millis() - lastData > 10000) break;
+      delay(5);
+    }
+  }
+  http.end();
+  body[got] = 0;
+  Serial.printf("Update: release list is %u bytes (server said %d)\n", (unsigned)got, bodyLen);
   JsonDocument filter;
   filter[0]["tag_name"] = true;
   filter[0]["draft"] = true;
@@ -160,13 +189,14 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
   filter[0]["assets"][0]["size"] = true;
   filter[0]["assets"][0]["digest"] = true;
   JsonDocument doc;
-  DeserializationError je = deserializeJson(doc, http.getStream(), DeserializationOption::Filter(filter));
-  http.end();
+  DeserializationError je = deserializeJson(doc, (const uint8_t*)body, got, DeserializationOption::Filter(filter));
   if (je) {
-    Serial.printf("Update: bad release list (%s)\n", je.c_str());
+    Serial.printf("Update: bad release list (%s), starts: %.60s\n", je.c_str(), (const char*)body);
+    heap_caps_free(body);
     *error = "Couldn't read the release list";
     return false;
   }
+  heap_caps_free(body);
   for (JsonObject rel : doc.as<JsonArray>()) {
     if (rel["draft"] | false) continue;
     const char* tag = rel["tag_name"] | "";
