@@ -324,9 +324,11 @@ void updaterBoot() {
     uiClose();
     return;
   }
+  Serial.printf("Update: running %s, channel %s, connecting to '%s'\n", FW_VERSION, g_settings.updateChannel.c_str(),
+                g_settings.ssid.c_str());
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
-  if (!connectWifi(forced ? 15000 : 6000)) {
-    Serial.println("Update: Wi-Fi didn't connect");
+  if (!connectWifi(forced ? 15000 : 12000)) {
+    Serial.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
       pumpFor(2500);
@@ -335,6 +337,7 @@ void updaterBoot() {
     uiClose();
     return;
   }
+  Serial.println("Update: Wi-Fi connected, syncing the clock");
   uiShow("UPDATES", "Checking the time...", -1);
   if (!syncClock()) {
     Serial.println("Update: clock didn't sync");
@@ -346,6 +349,7 @@ void updaterBoot() {
     uiClose();
     return;
   }
+  Serial.println("Update: clock set, reading the release list");
   FwVersion current;
   versionParse(FW_VERSION, &current);
   bool beta = g_settings.updateChannel == "beta";
