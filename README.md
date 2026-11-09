@@ -65,6 +65,14 @@ update=true
 update_channel=release
 ssid=YourWifi
 password=YourPassword
+ssid2=YourWifi2
+password2=YourPassword2
+ssid3=YourWifi3
+password3=YourPassword3
+ssid4=YourWifi4
+password4=YourPassword4
+ssid5=YourWifi5
+password5=YourPassword5
 colour1=#1A0650
 colour2=#3A12A8
 speed_unit=mph
@@ -82,7 +90,7 @@ dark_mode=false
 | `vehicle` | `generic`, `meganers3`, `bmwe8x` |
 | `update` | `true` or `false`, whether to check for updates when it starts |
 | `update_channel` | `release` or `beta` |
-| `ssid`, `password` | Your Wi-Fi, only used to check for updates |
+| `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
 | `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle |
 | `speed_unit` | `mph` or `kph` |
 | `boost_unit` | `bar`, `psi` or `kpa` |

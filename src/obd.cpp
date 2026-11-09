@@ -23,6 +23,9 @@ static bool renaultBaro = false;
 static bool renaultVolt = false;
 static bool boostAbsolute = true;
 static float renaultBaroMbar = NAN;
+static bool bmwOil = false;
+static int bmwVariant = 0;
+static int bmwFormula = 0;
 
 struct KeyPid {
   uint8_t pid;
@@ -350,13 +353,133 @@ static void probeRenault() {
   }
 }
 
+static bool bmwParse(const String& reply, bool raw, uint8_t* d, int* n) {
+  String s = reply;
+  s.replace(" ", "");
+  int start = 0;
+  while (start <= (int)s.length()) {
+    int end = s.indexOf('|', start);
+    if (end < 0) end = s.length();
+    String line = s.substring(start, end);
+    int idx = line.indexOf("624402");
+    if (idx >= 0) {
+      int bytesAfter = ((int)line.length() - (idx + 6)) / 2;
+      int count;
+      if (raw) {
+        if (idx < 2) return false;
+        int pci = (int)strtol(line.substring(idx - 2, idx).c_str(), nullptr, 16);
+        count = pci - 3;
+        if (count < 1 || count > 4) return false;
+        if (count > bytesAfter) count = bytesAfter;
+      } else {
+        count = bytesAfter > 4 ? 4 : bytesAfter;
+      }
+      for (int i = 0; i < count; i++) {
+        d[i] = (uint8_t)strtol(line.substring(idx + 6 + i * 2, idx + 8 + i * 2).c_str(), nullptr, 16);
+      }
+      *n = count;
+      return count > 0;
+    }
+    start = end + 1;
+  }
+  return false;
+}
+
+static void bmwRestore() {
+  cmd("ATCRA", 2000);
+  cmd("ATCEA", 2000);
+  cmd("ATCAF1", 2000);
+  cmd("ATH0", 2000);
+  cmd("ATSH7DF", 2000);
+}
+
+static bool bmwQuery(int variant, uint8_t* d, int* n, String* replyOut) {
+  String r;
+  bool raw = variant < 2;
+  if (variant < 2) {
+    cmd("ATCAF0", 2000);
+    cmd("ATSH6F1", 2000);
+    cmd("ATH1", 2000);
+    cmd(variant == 0 ? "ATCRA612" : "ATCRA", 2000);
+    r = cmd("1203224402", 2000);
+  } else {
+    cmd("ATCAF1", 2000);
+    cmd("ATSH6F1", 2000);
+    cmd("ATH0", 2000);
+    cmd("ATCEA12", 2000);
+    cmd("ATCRA612", 2000);
+    r = cmd("224402", 2000);
+  }
+  if (replyOut) *replyOut = r;
+  return bmwParse(r, raw, d, n);
+}
+
+static void bmwDecode(const uint8_t* d, int n, float* a, float* b) {
+  if (n == 1) {
+    *a = (float)d[0] - 60.0f;
+    *b = d[0] * 0.75f - 48.0f;
+  } else {
+    uint16_t raw = ((uint16_t)d[0] << 8) | d[1];
+    *a = (float)(int16_t)raw * 0.1f;
+    *b = raw * 0.75f - 48.0f;
+  }
+}
+
+static bool bmwPlausible(float t) { return t > -40.0f && t < 200.0f; }
+
+static bool bmwReadOil(float& out) {
+  uint8_t d[4];
+  int n = 0;
+  String reply;
+  bool ok = bmwQuery(bmwVariant, d, &n, &reply);
+  bmwRestore();
+  if (!ok) return false;
+  float a, b;
+  bmwDecode(d, n, &a, &b);
+  out = bmwFormula == 0 ? a : b;
+  return bmwPlausible(out);
+}
+
+static void probeBmw() {
+  Serial.println("\n--- BMW engine ECU request (22 4402 to the DME at 0x12) ---");
+  bmwOil = false;
+  if (worked[0x5C]) {
+    Serial.println("  Standard PID 5C already works, so no BMW request is needed");
+    return;
+  }
+  const char* names[] = {"raw frame, reply filter 612", "raw frame, no reply filter", "extended addressing 12"};
+  for (int v = 0; v < 3; v++) {
+    uint8_t d[4];
+    int n = 0;
+    String reply;
+    bool ok = bmwQuery(v, d, &n, &reply);
+    Serial.printf("  variant %d (%s): %s\n", v, names[v], reply.c_str());
+    if (!ok) continue;
+    float a, b;
+    bmwDecode(d, n, &a, &b);
+    float coolant = NAN;
+    readValue(0x05, coolant);
+    Serial.printf("  got %d byte(s), reading A %.1f C, reading B %.1f C, coolant %.1f C\n", n, a, b, coolant);
+    bool pa = bmwPlausible(a), pb = bmwPlausible(b);
+    if (pa && pb && !isnan(coolant)) bmwFormula = fabsf(a - coolant) <= fabsf(b - coolant) ? 0 : 1;
+    else bmwFormula = pa ? 0 : 1;
+    bmwVariant = v;
+    bmwOil = true;
+    g_live.oilC = bmwFormula == 0 ? a : b;
+    Serial.printf("  using variant %d and reading %c\n", v, bmwFormula == 0 ? 'A' : 'B');
+    break;
+  }
+  if (!bmwOil) Serial.println("  No usable reply from the DME, oil temperature stays unavailable");
+  bmwRestore();
+}
+
 static void printSummary() {
   Serial.println("\n--- Summary: will each planned screen work? ---");
   summaryLine("RPM", worked[0x0C], "PID 0C");
   summaryLine("Speed", worked[0x0D], "PID 0D");
   summaryLine("Coolant", worked[0x05], "PID 05");
-  summaryLine("Oil temp", worked[0x5C] || renaultOil,
-              worked[0x5C] ? "PID 5C" : (renaultOil ? "Renault request 22 2007" : "not available"));
+  summaryLine("Oil temp", worked[0x5C] || renaultOil || bmwOil,
+              worked[0x5C] ? "PID 5C" : (renaultOil ? "Renault request 22 2007" : (bmwOil ? "BMW request 22 4402" : "not available")));
   summaryLine("Boost", worked[0x0B] || renaultBoost,
               renaultBoost ? "Renault boost pressure 22 2401"
                            : (worked[0x33] ? "MAP 0B minus baro 33"
@@ -413,6 +536,7 @@ static void probe() {
     }
   }
   if (g_settings.vehicle == "meganers3") probeRenault();
+  if (g_settings.vehicle == "bmwe8x") probeBmw();
   printSummary();
   if (supported[0x0D]) speedRate(3000);
   Serial.println("--- Probe done ---\n");
@@ -515,6 +639,11 @@ static void pollNeeded() {
   if (need(M_OIL)) {
     if (renaultOil) {
       if (readDidValue(0x2007, v)) {
+        g_live.oilC = v;
+        any = true;
+      }
+    } else if (bmwOil) {
+      if (bmwReadOil(v)) {
         g_live.oilC = v;
         any = true;
       }
@@ -624,6 +753,8 @@ static void handleSerial() {
         Serial.println("Polling what the screen needs");
       } else if (lineBuf.equalsIgnoreCase("probe")) {
         probe();
+      } else if (lineBuf.equalsIgnoreCase("bmw")) {
+        probeBmw();
       } else if (lineBuf.equalsIgnoreCase("reinit")) {
         initAdapter();
       } else {
