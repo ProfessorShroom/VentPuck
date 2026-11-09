@@ -15,6 +15,7 @@ struct Settings {
   int brightness = 80;  // percent, 5-100
   bool bootAnimation = true;
   bool darkMode = false;
+  String accent = "purple";
   String vehicle = "generic";
   String startScreen = "last";
   String homeItems[4] = {"oil", "coolant", "boost", "rpm"};

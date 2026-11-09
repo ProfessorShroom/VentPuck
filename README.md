@@ -19,8 +19,8 @@ Built for my Renault Megane 3 RS, with a generic OBD2 mode for other cars. Suppo
 
 ### Currently being tested on
 
-**Renault Megane RS 3**
-**BMW E8x**
+- **Renault Megane RS 3**
+- **BMW E8x**
 
 
 Releases and betas are on the [Releases](https://github.com/ProfessorShroom/VentPuck/releases) page.
@@ -33,7 +33,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
 - Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, start screen, home screen readings, boot animation, dark mode, update channel and version.
-- Dark mode with a pure black background, which suits the AMOLED.
+- Dark mode with a pure black background, which suits the AMOLED, and a choice of accent colour for the text, icons and buttons.
 - Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
 - Boot animation with your own logo. Put a `logo.png` on the SD card to replace the default. This must be no larger than 1024x1024 and 1MB in size. I would suggest around 700x700 maximum for speed.
 - OTA updates over Wi-Fi from GitHub, with a Release or Beta channel.

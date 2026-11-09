@@ -22,7 +22,7 @@ static const int PAGE_COUNT = METRIC_COUNT + 3;
 static const int RUN_PAGE = METRIC_COUNT + 1;
 static const int FAULT_PAGE = METRIC_COUNT + 2;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 16;
+static const int MENU_ROWS = 17;
 
 struct MetricDef {
   const char* key;
@@ -74,6 +74,7 @@ static float bestSeconds = 0.0f;
 static bool clearHolding = false;
 static uint32_t clearStart = 0;
 static lv_obj_t* menuLabel[MENU_ROWS];
+static lv_obj_t* menuBtn[MENU_ROWS];
 static lv_timer_t* pageSaveTimer = nullptr;
 static lv_timer_t* settingsSaveTimer = nullptr;
 static int curPage = 0;
@@ -84,6 +85,75 @@ static uint32_t releasedAt = 0;
 static String vehicleAtOpen;
 
 static const lv_color_t LAVENDER = LV_COLOR_MAKE(0xD9, 0xB8, 0xFF);
+
+struct AccentDef {
+  const char* key;
+  const char* label;
+  uint32_t base;
+};
+
+static const AccentDef ACCENTS[] = {{"purple", "Purple", 0x8A5CFF}, {"blue", "Blue", 0x3C8CFF}, {"cyan", "Cyan", 0x1CC8D8},
+                                    {"green", "Green", 0x3CD070},   {"yellow", "Yellow", 0xF2C230}, {"orange", "Orange", 0xFF8A2A},
+                                    {"red", "Red", 0xFF4A4A},       {"pink", "Pink", 0xFF5CA8},     {"white", "White", 0xDDDDDD}};
+static const int ACCENT_COUNT = 9;
+
+static lv_style_t stText;
+static lv_style_t stIcon;
+static lv_style_t stFill;
+static lv_style_t stBtnMain;
+static lv_style_t stBtnDark;
+static lv_style_t stBtnPressed;
+
+static int accentIndex() {
+  for (int i = 0; i < ACCENT_COUNT; i++) {
+    if (g_settings.accent == ACCENTS[i].key) return i;
+  }
+  return 0;
+}
+
+static uint32_t mixHex(uint32_t a, uint32_t b, int pct) {
+  uint32_t out = 0;
+  for (int shift = 16; shift >= 0; shift -= 8) {
+    int ca = (a >> shift) & 0xFF;
+    int cb = (b >> shift) & 0xFF;
+    out |= (uint32_t)(ca + (cb - ca) * pct / 100) << shift;
+  }
+  return out;
+}
+
+static void initAccentStyles() {
+  lv_style_init(&stText);
+  lv_style_init(&stIcon);
+  lv_style_init(&stFill);
+  lv_style_init(&stBtnMain);
+  lv_style_init(&stBtnDark);
+  lv_style_init(&stBtnPressed);
+}
+
+static void applyAccent() {
+  int idx = accentIndex();
+  uint32_t text = 0xD9B8FF, icon = 0xEAD9FF, main = 0x5A1FE0, dark = 0x2A0A78, pressed = 0x8A5CFF;
+  if (g_settings.darkMode && idx != 0) {
+    uint32_t base = ACCENTS[idx].base;
+    text = mixHex(base, 0xFFFFFF, 35);
+    icon = mixHex(base, 0xFFFFFF, 65);
+    main = mixHex(base, 0x000000, 55);
+    dark = mixHex(base, 0x000000, 75);
+    pressed = base;
+  }
+  lv_style_set_text_color(&stText, lv_color_hex(text));
+  lv_style_set_img_recolor(&stIcon, lv_color_hex(icon));
+  lv_style_set_bg_color(&stFill, lv_color_hex(text));
+  lv_style_set_bg_color(&stBtnMain, lv_color_hex(main));
+  lv_style_set_bg_color(&stBtnDark, lv_color_hex(dark));
+  lv_style_set_bg_color(&stBtnPressed, lv_color_hex(pressed));
+  lv_obj_report_style_change(nullptr);
+}
+
+static void styleButton(lv_obj_t* b, bool main) {
+  lv_obj_add_style(b, main ? &stBtnMain : &stBtnDark, 0);
+  lv_obj_add_style(b, &stBtnPressed, LV_STATE_PRESSED);
+}
 
 static int metricIndex(const String& key) {
   for (int i = 0; i < METRIC_COUNT; i++) {
@@ -227,7 +297,8 @@ static void updateFaultLabels() {
   }
   setText(faultStatus, status);
   bool bad = g_dtc.state == DTCS_DONE && g_dtc.count > 0;
-  lv_obj_set_style_img_recolor(faultIcon, bad ? lv_color_hex(0xFF5A5A) : lv_color_hex(0xEAD9FF), 0);
+  if (bad) lv_obj_set_style_img_recolor(faultIcon, lv_color_hex(0xFF5A5A), 0);
+  else lv_obj_remove_local_style_prop(faultIcon, LV_STYLE_IMG_RECOLOR, 0);
   char buf[96] = "";
   if (g_dtc.state == DTCS_DONE) {
     int shown = g_dtc.count < 9 ? g_dtc.count : 9;
@@ -508,12 +579,15 @@ static void menuText(int id, char* out, size_t n) {
       snprintf(out, n, "Dark mode: %s", g_settings.darkMode ? "On" : "Off");
       break;
     case 13:
-      snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
+      snprintf(out, n, "Accent: %s", ACCENTS[accentIndex()].label);
       break;
     case 14:
-      snprintf(out, n, "Check for updates now");
+      snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
       break;
     case 15:
+      snprintf(out, n, "Check for updates now");
+      break;
+    case 16:
       snprintf(out, n, "Version %s", FW_VERSION);
       break;
     default: {
@@ -524,8 +598,14 @@ static void menuText(int id, char* out, size_t n) {
   }
 }
 
+static void updateAccentRow() {
+  if (g_settings.darkMode) lv_obj_clear_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_add_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
+}
+
 static void refreshMenu() {
   char buf[48];
+  updateAccentRow();
   for (int i = 0; i < MENU_ROWS; i++) {
     menuText(i, buf, sizeof buf);
     lv_label_set_text(menuLabel[i], buf);
@@ -591,13 +671,14 @@ static void applyTheme() {
     else lv_obj_clear_flag(gradCanvas, LV_OBJ_FLAG_HIDDEN);
   }
   if (menuObj) lv_obj_set_style_bg_color(menuObj, dark ? lv_color_hex(0x000000) : lv_color_hex(0x0D0620), 0);
+  applyAccent();
 }
 
 static void setChannel(const char* channel) {
   g_settings.updateChannel = channel;
   char buf[48];
-  menuText(13, buf, sizeof buf);
-  lv_label_set_text(menuLabel[13], buf);
+  menuText(14, buf, sizeof buf);
+  lv_label_set_text(menuLabel[14], buf);
   settingsSaveSoon();
 }
 
@@ -613,8 +694,7 @@ static lv_obj_t* modalButton(lv_obj_t* parent, const char* text, int y, uint32_t
   lv_obj_set_size(b, 260, 52);
   lv_obj_set_pos(b, 103, y);
   lv_obj_set_style_radius(b, 26, 0);
-  lv_obj_set_style_bg_color(b, lv_color_hex(colour), 0);
-  lv_obj_set_style_bg_color(b, lv_color_hex(0x8A5CFF), LV_STATE_PRESSED);
+  styleButton(b, colour == 0x5A1FE0);
   lv_obj_set_style_shadow_width(b, 0, 0);
   lv_obj_add_event_cb(b, cb, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* l = lv_label_create(b);
@@ -660,13 +740,13 @@ static void menuClick(lv_event_t* e) {
     closeMenu();
     return;
   }
-  if (id == 15) return;
-  if (id == 13) {
+  if (id == 16) return;
+  if (id == 14) {
     if (g_settings.updateChannel == "beta") setChannel("release");
     else lv_obj_clear_flag(betaModal, LV_OBJ_FLAG_HIDDEN);
     return;
   }
-  if (id == 14) {
+  if (id == 15) {
     settingsSave();
     updaterRequestNow();
     Serial.println("Update check requested, restarting");
@@ -707,6 +787,10 @@ static void menuClick(lv_event_t* e) {
   } else if (id == 12) {
     g_settings.darkMode = !g_settings.darkMode;
     applyTheme();
+    updateAccentRow();
+  } else if (id == 13) {
+    g_settings.accent = ACCENTS[(accentIndex() + 1) % ACCENT_COUNT].key;
+    applyAccent();
   } else {
     int slot = id - 7;
     int next = (metricIndex(g_settings.homeItems[slot]) + 1) % METRIC_COUNT;
@@ -776,7 +860,8 @@ static lv_obj_t* makeLabel(lv_obj_t* parent, const lv_font_t* font, lv_color_t c
   lv_obj_set_width(l, w);
   lv_obj_set_pos(l, x, y);
   lv_obj_set_style_text_font(l, font, 0);
-  lv_obj_set_style_text_color(l, col, 0);
+  if (col.full == LAVENDER.full) lv_obj_add_style(l, &stText, 0);
+  else lv_obj_set_style_text_color(l, col, 0);
   lv_obj_set_style_text_align(l, align, 0);
   return l;
 }
@@ -785,7 +870,7 @@ static lv_obj_t* makeIcon(lv_obj_t* parent, const lv_img_dsc_t* src, int x, int 
   lv_obj_t* img = lv_img_create(parent);
   lv_img_set_src(img, src);
   lv_obj_set_pos(img, x, y);
-  lv_obj_set_style_img_recolor(img, lv_color_hex(0xEAD9FF), 0);
+  lv_obj_add_style(img, &stIcon, 0);
   lv_obj_set_style_img_recolor_opa(img, LV_OPA_COVER, 0);
   return img;
 }
@@ -805,7 +890,7 @@ static void buildHomePage(lv_obj_t* scr) {
       lv_obj_remove_style_all(line);
       lv_obj_set_size(line, 340, 2);
       lv_obj_set_pos(line, 63, top + 74);
-      lv_obj_set_style_bg_color(line, LAVENDER, 0);
+      lv_obj_add_style(line, &stFill, 0);
       lv_obj_set_style_bg_opa(line, LV_OPA_30, 0);
     }
   }
@@ -846,8 +931,7 @@ static lv_obj_t* makeButton(lv_obj_t* parent, int x, int y, int w, int h, uint32
   lv_obj_set_size(b, w, h);
   lv_obj_set_pos(b, x, y);
   lv_obj_set_style_radius(b, h / 2, 0);
-  lv_obj_set_style_bg_color(b, lv_color_hex(colour), 0);
-  lv_obj_set_style_bg_color(b, lv_color_hex(0x8A5CFF), LV_STATE_PRESSED);
+  styleButton(b, colour == 0x5A1FE0);
   lv_obj_set_style_shadow_width(b, 0, 0);
   return b;
 }
@@ -924,12 +1008,12 @@ static void buildMenu(lv_obj_t* scr) {
     lv_obj_t* b = lv_btn_create(menuObj);
     lv_obj_set_size(b, 340, 58);
     lv_obj_set_style_radius(b, 29, 0);
-    lv_obj_set_style_bg_color(b, i == 0 ? lv_color_hex(0x5A1FE0) : lv_color_hex(0x2A0A78), 0);
-    if (i == 15) {
+    styleButton(b, i == 0);
+    menuBtn[i] = b;
+    if (i == 16) {
       lv_obj_set_style_bg_opa(b, LV_OPA_TRANSP, 0);
       lv_obj_clear_flag(b, LV_OBJ_FLAG_CLICKABLE);
     }
-    lv_obj_set_style_bg_color(b, lv_color_hex(0x8A5CFF), LV_STATE_PRESSED);
     lv_obj_set_style_shadow_width(b, 0, 0);
     lv_obj_add_event_cb(b, menuClick, LV_EVENT_CLICKED, (void*)(intptr_t)i);
     menuLabel[i] = lv_label_create(b);
@@ -963,6 +1047,8 @@ static int startPage() {
 }
 
 void uiBuild(lv_obj_t* scr) {
+  initAccentStyles();
+  applyAccent();
   buildBackground(scr);
   buildHomePage(scr);
   buildMetricPages(scr);

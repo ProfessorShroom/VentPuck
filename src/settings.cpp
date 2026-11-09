@@ -78,13 +78,14 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "boot_animation", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel"};
+                                     "temp_unit", "brightness", "boot_animation", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent"};
 
 static String iniValue(const char* key) {
   String k = key;
   char buf[16];
   if (k == "update") return g_settings.update ? "true" : "false";
   if (k == "update_channel") return g_settings.updateChannel;
+  if (k == "accent") return g_settings.accent;
   if (k == "ssid") return g_settings.ssid;
   if (k == "password") return g_settings.password;
   if (k == "colour1") {
@@ -118,6 +119,12 @@ static void applyKey(String key, String val) {
 
   if (key == "update") {
     g_settings.update = parseBool(val, false);
+  } else if (key == "accent") {
+    val.toLowerCase();
+    static const char* names[] = {"purple", "blue", "cyan", "green", "yellow", "orange", "red", "pink", "white"};
+    for (const char* n : names) {
+      if (val == n) g_settings.accent = val;
+    }
   } else if (key == "update_channel") {
     val.toLowerCase();
     if (val == "release" || val == "beta") g_settings.updateChannel = val;
@@ -207,6 +214,8 @@ static bool writeIni() {
   f.printf("boot_animation=%s\n", iniValue("boot_animation").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");
   f.printf("dark_mode=%s\n", iniValue("dark_mode").c_str());
+  f.print("# Accent colour used in dark mode: purple, blue, cyan, green, yellow, orange, red, pink or white\n");
+  f.printf("accent=%s\n", iniValue("accent").c_str());
   f.close();
   return true;
 }
