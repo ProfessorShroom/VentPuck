@@ -537,9 +537,9 @@ static void capitalise(char* s) {
 }
 
 static const char* vehicleLabel() {
-  if (g_settings.vehicle == "meganers3") return "Megane 3 RS";
-  if (g_settings.vehicle == "clio4rs") return "Clio 4 RS";
-  if (g_settings.vehicle == "megane4rs") return "Megane 4 RS";
+  if (g_settings.vehicle == "meganers3") return "Megane 3 RS (X95)";
+  if (g_settings.vehicle == "clio4rs") return "Clio 4 RS (X98)";
+  if (g_settings.vehicle == "megane4rs") return "Megane 4 RS (XFB)";
   if (g_settings.vehicle == "bmwe8x") return "BMW E8x";
   return "Generic";
 }
