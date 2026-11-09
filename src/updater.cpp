@@ -78,6 +78,10 @@ static void uiClose() {
 }
 
 static void uiShow(const char* title, const char* status, int pct) {
+  if (!cover) {
+    displayLoop();
+    return;
+  }
   lv_label_set_text(titleLbl, title);
   lv_label_set_text(statusLbl, status);
   if (pct >= 0) {
@@ -90,6 +94,7 @@ static void uiShow(const char* title, const char* status, int pct) {
 }
 
 static void pumpFor(uint32_t ms) {
+  if (!cover) return;
   uint32_t t0 = millis();
   while (millis() - t0 < ms) {
     displayLoop();
@@ -102,11 +107,11 @@ static void radioOff() {
   WiFi.mode(WIFI_OFF);
 }
 
-static bool connectWifi() {
+static bool connectWifi(uint32_t timeoutMs) {
   WiFi.mode(WIFI_STA);
   WiFi.begin(g_settings.ssid.c_str(), g_settings.password.c_str());
   uint32_t t0 = millis();
-  while (WiFi.status() != WL_CONNECTED && millis() - t0 < 15000) {
+  while (WiFi.status() != WL_CONNECTED && millis() - t0 < timeoutMs) {
     displayLoop();
     delay(50);
   }
@@ -309,7 +314,7 @@ static bool takeRequest() {
 void updaterBoot() {
   bool forced = takeRequest();
   if (!forced && !g_settings.update) return;
-  uiOpen();
+  if (forced) uiOpen();
   const char* error = nullptr;
   if (g_settings.ssid.length() == 0) {
     if (forced) {
@@ -320,7 +325,7 @@ void updaterBoot() {
     return;
   }
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
-  if (!connectWifi()) {
+  if (!connectWifi(forced ? 15000 : 6000)) {
     Serial.println("Update: Wi-Fi didn't connect");
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
@@ -333,8 +338,10 @@ void updaterBoot() {
   uiShow("UPDATES", "Checking the time...", -1);
   if (!syncClock()) {
     Serial.println("Update: clock didn't sync");
-    uiShow("UPDATES", "Couldn't get the time", -1);
-    pumpFor(2500);
+    if (forced) {
+      uiShow("UPDATES", "Couldn't get the time", -1);
+      pumpFor(2500);
+    }
     radioOff();
     uiClose();
     return;
@@ -347,14 +354,19 @@ void updaterBoot() {
   memset(&c, 0, sizeof c);
   bool ok = findUpdate(c, beta, current, &error);
   if (!ok) {
-    uiShow("UPDATES", error, -1);
-    pumpFor(3000);
+    if (forced) {
+      uiShow("UPDATES", error, -1);
+      pumpFor(3000);
+    }
   } else if (!c.found) {
     Serial.printf("Update: %s is the newest on the %s channel\n", FW_VERSION, beta ? "beta" : "release");
-    uiShow("UPDATES", "Up to date", -1);
-    pumpFor(forced ? 2000 : 800);
+    if (forced) {
+      uiShow("UPDATES", "Up to date", -1);
+      pumpFor(2000);
+    }
   } else {
     Serial.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
+    if (!cover) uiOpen();
     char line[64];
     snprintf(line, sizeof line, "Version %s", c.tag);
     uiShow("UPDATING", line, 0);
