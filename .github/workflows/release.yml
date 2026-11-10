@@ -56,7 +56,7 @@ jobs:
         run: pip install platformio
 
       - name: Build
-        run: pio run -e amoled175
+        run: pio run -e ventpuck
 
       - name: Create the release if needed and attach firmware.bin
         run: |
@@ -66,4 +66,4 @@ jobs:
             case "${{ steps.ver.outputs.version }}" in *b*) FLAG="--prerelease" ;; esac
             gh release create "$TAG" --title "$TAG" --generate-notes $FLAG
           fi
-          gh release upload "$TAG" .pio/build/amoled175/firmware.bin --clobber
+          gh release upload "$TAG" .pio/build/ventpuck/firmware.bin --clobber
