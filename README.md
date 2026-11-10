@@ -119,7 +119,7 @@ Release versions look like `1.0.0.0` and betas look like `1.0.0.0b1`. On the Rel
 VentPuck is written in C++ with PlatformIO, LVGL and NimBLE-Arduino.
 
 ```bash
-pio run -e amoled175 -t upload
+pio run -e ventpuck -t upload
 ```
 
 ### Changelog
