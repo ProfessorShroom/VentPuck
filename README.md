@@ -19,7 +19,7 @@ Built for my Renault Megane 3 RS, with a generic OBD2 mode for other cars. Suppo
 
 ### Currently being tested on
 
-- **Renault Megane RS 3**
+- **Renault Megane 3 RS**
 - **BMW E8x**
 
 
@@ -55,7 +55,7 @@ In swipe order: Home, Boost, Oil and coolant, IAT, RPM, Speed, Voltage, Load and
 | Megane 3 RS | Renault Megane 3 RS (X95) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
 | Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | Megane 4 RS | Renault Megane 4 RS (XFB) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
-| BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings for now, BMW specific readings to come. |
+| BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings plus an experimental oil temperature request to the engine computer, still being tested. |
 | Generic | Any car with OBD2 | Standard OBD2 readings only, so some screens such as oil temperature may show nothing. |
 
 Changing the car restarts the gauge.
