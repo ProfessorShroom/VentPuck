@@ -41,6 +41,7 @@ static const int BRIGHTNESS_STEPS[] = {20, 40, 60, 80, 100};
 static lv_color_t* gradBuf = nullptr;
 static lv_obj_t* gradCanvas = nullptr;
 static lv_obj_t* statusLbl;
+static lv_obj_t* ambientLbl;
 static lv_obj_t* pageObj[PAGE_COUNT];
 static lv_obj_t* dotObj[PAGE_COUNT];
 static lv_obj_t* homeIcon[HOME_SLOTS];
@@ -357,6 +358,7 @@ static void updateWant() {
   } else if (curPage == RUN_PAGE) {
     mainMask = 1u << M_SPEED;
   }
+  secMask |= 1u << WANT_AMBIENT;
   g_want.secondary = secMask;
   g_want.main = mainMask;
 }
@@ -388,6 +390,16 @@ static void refreshValues() {
     case OBD_LIVE: status = ""; break;
   }
   setText(statusLbl, status);
+  if (isnan(g_live.ambientC)) {
+    lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
+  } else {
+    char at[12];
+    char ab[24];
+    tempText(g_live.ambientC, at, sizeof at);
+    snprintf(ab, sizeof ab, "%s°%s", at, g_settings.tempUnit.c_str());
+    setText(ambientLbl, ab);
+    lv_obj_clear_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
+  }
   if (curPage == RUN_PAGE) {
     updateRunLabels();
     return;
@@ -537,9 +549,9 @@ static void capitalise(char* s) {
 }
 
 static const char* vehicleLabel() {
-  if (g_settings.vehicle == "meganers3") return "Megane 3 RS (X95)";
-  if (g_settings.vehicle == "clio4rs") return "Clio 4 RS (X98)";
-  if (g_settings.vehicle == "megane4rs") return "Megane 4 RS (XFB)";
+  if (g_settings.vehicle == "meganers3") return "Megane 3 RS";
+  if (g_settings.vehicle == "clio4rs") return "Clio 4 RS";
+  if (g_settings.vehicle == "megane4rs") return "Megane 4 RS";
   if (g_settings.vehicle == "bmwe8x") return "BMW E8x";
   return "Generic";
 }
@@ -981,6 +993,9 @@ static void buildFaultPage(lv_obj_t* scr) {
 static void buildChrome(lv_obj_t* scr) {
   statusLbl = makeLabel(scr, &lv_font_montserrat_20, lv_color_hex(0xFFFFFF), 0, 60, SCREEN, LV_TEXT_ALIGN_CENTER);
   lv_label_set_text(statusLbl, "");
+  ambientLbl = makeLabel(scr, &lv_font_montserrat_20, LAVENDER, 296, 72, 74, LV_TEXT_ALIGN_RIGHT);
+  lv_label_set_text(ambientLbl, "");
+  lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
   int startX = SCREEN / 2 - (PAGE_COUNT * 10 + (PAGE_COUNT - 1) * 10) / 2;
   for (int i = 0; i < PAGE_COUNT; i++) {
     dotObj[i] = lv_obj_create(scr);

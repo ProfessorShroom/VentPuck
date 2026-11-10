@@ -14,12 +14,15 @@ struct LiveData {
   volatile float mapKpa = NAN;
   volatile float baroKpa = NAN;
   volatile float batteryV = NAN;
+  volatile float ambientC = NAN;
   volatile uint32_t speedStamp = 0;
 };
 
 extern LiveData g_live;
 
 enum Metric : uint8_t { M_BOOST, M_OIL, M_COOLANT, M_RPM, M_SPEED, M_VOLTAGE };
+
+constexpr int WANT_AMBIENT = 7;
 
 struct WantData {
   volatile uint32_t main = 0x3F;

@@ -31,6 +31,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - **Home** screen with four readings you choose, by default oil, coolant, boost and RPM.
 - Single reading screens for boost, oil temperature, coolant temperature, RPM, speed and battery voltage, each with oil and coolant temperature always shown at the bottom.
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
+- Outside air temperature shown small in the top corner of every screen, only if the car reports it.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
 - Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, start screen, home screen readings, boot animation, dark mode, update channel and version.
 - Dark mode with a pure black background, which suits the AMOLED, and a choice of accent colour for the text, icons and buttons.
@@ -42,7 +43,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 
 | Setting | Car | What you get |
 | --- | --- | --- |
-| Megane 3 RS | Renault Megane 3 RS (X95) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
+| Megane 3 RS | Renault Megane 3 RS (F4Rt) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
 | Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | Megane 4 RS | Renault Megane 4 RS (XFB) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings for now, BMW specific readings to come. |

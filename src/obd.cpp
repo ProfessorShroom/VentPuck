@@ -684,6 +684,10 @@ static void pollNeeded() {
       }
     }
   }
+  if (worked[0x46] && need(WANT_AMBIENT) && readValue(0x46, v)) {
+    g_live.ambientC = v;
+    any = true;
+  }
   if (!any) delay(30);
   if (millis() - lastLog > 1000) {
     lastLog = millis();
