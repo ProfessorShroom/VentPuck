@@ -17,10 +17,12 @@
 LV_FONT_DECLARE(font_digits);
 
 static const int SCREEN = 466;
-static const int METRIC_COUNT = 6;
-static const int PAGE_COUNT = METRIC_COUNT + 3;
-static const int RUN_PAGE = METRIC_COUNT + 1;
-static const int FAULT_PAGE = METRIC_COUNT + 2;
+static const int METRIC_COUNT = 9;
+static const int PAGE_COUNT = 10;
+static const int TEMPS_PAGE = 2;
+static const int LOAD_PAGE = 7;
+static const int RUN_PAGE = 8;
+static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
 static const int MENU_ROWS = 17;
 
@@ -32,10 +34,22 @@ struct MetricDef {
 
 static const MetricDef METRICS[METRIC_COUNT] = {
     {"boost", "Boost", &iconBoost},   {"oil", "Oil", &iconOil},       {"coolant", "Coolant", &iconCoolant},
-    {"rpm", "RPM", &iconRpm},         {"speed", "Speed", &iconSpeed}, {"voltage", "Voltage", &iconVoltage}};
+    {"rpm", "RPM", &iconRpm},         {"speed", "Speed", &iconSpeed}, {"voltage", "Voltage", &iconVoltage},
+    {"iat", "IAT", &iconIat},         {"load", "Load", &iconLoad},    {"throttle", "Throttle", &iconThrottle}};
 
-static const char* START_OPTIONS[] = {"last", "home", "boost", "oil", "coolant", "rpm", "speed", "voltage", "zerosixty", "faults"};
-static const int START_OPTION_COUNT = 10;
+static int pageMetric(int p) {
+  switch (p) {
+    case 1: return 0;
+    case 3: return 6;
+    case 4: return 3;
+    case 5: return 4;
+    case 6: return 5;
+    default: return -1;
+  }
+}
+
+static const char* START_OPTIONS[] = {"last", "home", "boost", "temps", "rpm", "speed", "voltage", "iat", "load", "zerosixty", "faults"};
+static const int START_OPTION_COUNT = 11;
 static const int BRIGHTNESS_STEPS[] = {20, 40, 60, 80, 100};
 
 static lv_color_t* gradBuf = nullptr;
@@ -49,6 +63,9 @@ static lv_obj_t* homeLabel[HOME_SLOTS];
 static lv_obj_t* homeValue[HOME_SLOTS];
 static lv_obj_t* pageTitle[METRIC_COUNT];
 static lv_obj_t* pageValue[METRIC_COUNT];
+static lv_obj_t* tempsValue[2];
+static lv_obj_t* loadValue[2];
+static lv_obj_t* tempsUnit[2];
 static lv_obj_t* stripOilIcon;
 static lv_obj_t* stripOilVal;
 static lv_obj_t* stripCoolIcon;
@@ -225,10 +242,20 @@ static void metricText(int m, char* val, size_t vn, char* unit, size_t un) {
       snprintf(unit, un, mph ? "mph" : "km/h");
       break;
     }
-    default: {
+    case 5: {
       float v = g_live.batteryV;
       if (!isnan(v)) snprintf(val, vn, "%.1f", v);
       snprintf(unit, un, "V");
+      break;
+    }
+    case 6:
+      tempText(g_live.iatC, val, vn);
+      snprintf(unit, un, f ? "°F" : "°C");
+      break;
+    default: {
+      float p = m == 7 ? g_live.loadPct : g_live.throttlePct;
+      if (!isnan(p)) snprintf(val, vn, "%.0f", p);
+      snprintf(unit, un, "%%");
       break;
     }
   }
@@ -352,8 +379,13 @@ static void updateWant() {
   uint32_t secMask = 0;
   if (curPage == 0) {
     for (int i = 0; i < HOME_SLOTS; i++) mainMask |= 1u << metricIndex(g_settings.homeItems[i]);
-  } else if (curPage <= METRIC_COUNT) {
-    mainMask = 1u << (curPage - 1);
+  } else if (curPage == TEMPS_PAGE) {
+    mainMask = (1u << M_OIL) | (1u << M_COOLANT);
+  } else if (curPage == LOAD_PAGE) {
+    mainMask = (1u << M_LOAD) | (1u << M_THROTTLE);
+    secMask = (1u << M_OIL) | (1u << M_COOLANT);
+  } else if (pageMetric(curPage) >= 0) {
+    mainMask = 1u << pageMetric(curPage);
     secMask = (1u << M_OIL) | (1u << M_COOLANT);
   } else if (curPage == RUN_PAGE) {
     mainMask = 1u << M_SPEED;
@@ -379,6 +411,17 @@ static void pageEntered(int p) {
     clearHolding = false;
     lv_bar_set_value(clearBar, 0, LV_ANIM_OFF);
   }
+}
+
+static void updateStrip() {
+  char t[12];
+  char buf[16];
+  tempText(g_live.oilC, t, sizeof t);
+  snprintf(buf, sizeof buf, "%s°", t);
+  setText(stripOilVal, buf);
+  tempText(g_live.coolantC, t, sizeof t);
+  snprintf(buf, sizeof buf, "%s°", t);
+  setText(stripCoolVal, buf);
 }
 
 static void refreshValues() {
@@ -421,7 +464,23 @@ static void refreshValues() {
     }
     return;
   }
-  int m = curPage - 1;
+  if (curPage == TEMPS_PAGE) {
+    for (int i = 0; i < 2; i++) {
+      metricText(1 + i, val, sizeof val, unit, sizeof unit);
+      setText(tempsValue[i], val);
+      setText(tempsUnit[i], unit);
+    }
+    return;
+  }
+  if (curPage == LOAD_PAGE) {
+    for (int i = 0; i < 2; i++) {
+      metricText(7 + i, val, sizeof val, unit, sizeof unit);
+      setText(loadValue[i], val);
+    }
+    updateStrip();
+    return;
+  }
+  int m = pageMetric(curPage);
   metricText(m, val, sizeof val, unit, sizeof unit);
   char up[16];
   char upUnit[8];
@@ -432,13 +491,7 @@ static void refreshValues() {
   setText(pageTitle[m], buf);
   setText(pageValue[m], val);
 
-  char t[12];
-  tempText(g_live.oilC, t, sizeof t);
-  snprintf(buf, sizeof buf, "%s°", t);
-  setText(stripOilVal, buf);
-  tempText(g_live.coolantC, t, sizeof t);
-  snprintf(buf, sizeof buf, "%s°", t);
-  setText(stripCoolVal, buf);
+  updateStrip();
 }
 
 static void refreshCb(lv_timer_t*) { refreshValues(); }
@@ -512,7 +565,7 @@ static void showPage(int p, bool save, int dir = 0) {
   }
   lv_obj_t* strip[] = {stripOilIcon, stripOilVal, stripCoolIcon, stripCoolVal};
   for (lv_obj_t* o : strip) {
-    if (p == 0 || p > METRIC_COUNT) lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
+    if (pageMetric(p) < 0 && p != LOAD_PAGE) lv_obj_add_flag(o, LV_OBJ_FLAG_HIDDEN);
     else lv_obj_clear_flag(o, LV_OBJ_FLAG_HIDDEN);
   }
   updateWant();
@@ -582,6 +635,9 @@ static void menuText(int id, char* out, size_t n) {
       if (g_settings.startScreen == "last") snprintf(tmp, sizeof tmp, "Last used");
       else if (g_settings.startScreen == "zerosixty") snprintf(tmp, sizeof tmp, "0-60");
       else if (g_settings.startScreen == "faults") snprintf(tmp, sizeof tmp, "Fault codes");
+      else if (g_settings.startScreen == "temps" || g_settings.startScreen == "oil" || g_settings.startScreen == "coolant") snprintf(tmp, sizeof tmp, "Oil & coolant");
+      else if (g_settings.startScreen == "load" || g_settings.startScreen == "throttle") snprintf(tmp, sizeof tmp, "Load & throttle");
+      else if (g_settings.startScreen == "iat") snprintf(tmp, sizeof tmp, "IAT");
       else snprintf(tmp, sizeof tmp, "%s", g_settings.startScreen.c_str());
       capitalise(tmp);
       snprintf(out, n, "Start: %s", tmp);
@@ -912,15 +968,50 @@ static void buildHomePage(lv_obj_t* scr) {
   }
 }
 
+static void buildDualRow(lv_obj_t* page, int top, const lv_img_dsc_t* icon, const char* caption, lv_obj_t** value,
+                         lv_obj_t** unit, const char* unitText) {
+  lv_obj_t* img = makeIcon(page, icon, 64, top + 4);
+  lv_img_set_pivot(img, 0, 0);
+  lv_img_set_zoom(img, 384);
+  lv_obj_t* cap = makeLabel(page, &lv_font_montserrat_20, LAVENDER, 40, top + 80, 120, LV_TEXT_ALIGN_CENTER);
+  lv_label_set_text(cap, caption);
+  *value = makeLabel(page, &font_digits, lv_color_hex(0xFFFFFF), 150, top, 190, LV_TEXT_ALIGN_RIGHT);
+  lv_label_set_text(*value, "--");
+  lv_obj_t* u = makeLabel(page, &lv_font_montserrat_28, LAVENDER, 346, top + 58, 70, LV_TEXT_ALIGN_LEFT);
+  lv_label_set_text(u, unitText);
+  if (unit) *unit = u;
+}
+
+static void buildDualPage(lv_obj_t* scr, int idx, const lv_img_dsc_t* iconA, const char* capA, const lv_img_dsc_t* iconB,
+                          const char* capB, lv_obj_t** values, lv_obj_t** units, const char* unitText, int topA,
+                          int topB) {
+  pageObj[idx] = makeContainer(scr);
+  buildDualRow(pageObj[idx], topA, iconA, capA, &values[0], units ? &units[0] : nullptr, unitText);
+  buildDualRow(pageObj[idx], topB, iconB, capB, &values[1], units ? &units[1] : nullptr, unitText);
+  lv_obj_t* line = lv_obj_create(pageObj[idx]);
+  lv_obj_remove_style_all(line);
+  lv_obj_set_size(line, 300, 2);
+  lv_obj_set_pos(line, 83, (topA + topB + 104) / 2 - 1);
+  lv_obj_add_style(line, &stFill, 0);
+  lv_obj_set_style_bg_opa(line, LV_OPA_30, 0);
+}
+
 static void buildMetricPages(lv_obj_t* scr) {
   for (int m = 0; m < METRIC_COUNT; m++) {
-    pageObj[m + 1] = makeContainer(scr);
-    pageTitle[m] = makeLabel(pageObj[m + 1], &lv_font_montserrat_28, LAVENDER, 0, 114, SCREEN, LV_TEXT_ALIGN_CENTER);
+    int p = -1;
+    for (int i = 1; i < PAGE_COUNT; i++) {
+      if (pageMetric(i) == m) p = i;
+    }
+    if (p < 0) continue;
+    pageObj[p] = makeContainer(scr);
+    pageTitle[m] = makeLabel(pageObj[p], &lv_font_montserrat_28, LAVENDER, 0, 114, SCREEN, LV_TEXT_ALIGN_CENTER);
     lv_obj_set_style_text_letter_space(pageTitle[m], 5, 0);
     lv_label_set_text(pageTitle[m], METRICS[m].label);
-    pageValue[m] = makeLabel(pageObj[m + 1], &font_digits, lv_color_hex(0xFFFFFF), 0, 148, SCREEN, LV_TEXT_ALIGN_CENTER);
+    pageValue[m] = makeLabel(pageObj[p], &font_digits, lv_color_hex(0xFFFFFF), 0, 148, SCREEN, LV_TEXT_ALIGN_CENTER);
     lv_label_set_text(pageValue[m], "--");
   }
+  buildDualPage(scr, TEMPS_PAGE, &iconOil, "OIL", &iconCoolant, "COOLANT", tempsValue, tempsUnit, "°C", 100, 232);
+  buildDualPage(scr, LOAD_PAGE, &iconLoad, "LOAD", &iconThrottle, "THROTTLE", loadValue, nullptr, "%", 92, 216);
   stripOilIcon = makeIcon(scr, &iconOil, 96, 343);
   stripOilVal = makeLabel(scr, &lv_font_montserrat_28, lv_color_hex(0xFFFFFF), 150, 349, 80, LV_TEXT_ALIGN_LEFT);
   stripCoolIcon = makeIcon(scr, &iconCoolant, 244, 343);
@@ -996,12 +1087,12 @@ static void buildChrome(lv_obj_t* scr) {
   ambientLbl = makeLabel(scr, &lv_font_montserrat_20, LAVENDER, 296, 72, 74, LV_TEXT_ALIGN_RIGHT);
   lv_label_set_text(ambientLbl, "");
   lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
-  int startX = SCREEN / 2 - (PAGE_COUNT * 10 + (PAGE_COUNT - 1) * 10) / 2;
+  int startX = SCREEN / 2 - (PAGE_COUNT * 10 + (PAGE_COUNT - 1) * 6) / 2;
   for (int i = 0; i < PAGE_COUNT; i++) {
     dotObj[i] = lv_obj_create(scr);
     lv_obj_remove_style_all(dotObj[i]);
     lv_obj_set_size(dotObj[i], 10, 10);
-    lv_obj_set_pos(dotObj[i], startX + i * 20, 418);
+    lv_obj_set_pos(dotObj[i], startX + i * 16, 418);
     lv_obj_set_style_radius(dotObj[i], LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(dotObj[i], lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_bg_opa(dotObj[i], LV_OPA_30, 0);
@@ -1059,8 +1150,10 @@ static int startPage() {
   }
   if (s == "zerosixty") return RUN_PAGE;
   if (s == "faults") return FAULT_PAGE;
-  for (int i = 0; i < METRIC_COUNT; i++) {
-    if (s == METRICS[i].key) return i + 1;
+  if (s == "temps" || s == "oil" || s == "coolant") return TEMPS_PAGE;
+  if (s == "load" || s == "throttle") return LOAD_PAGE;
+  for (int i = 1; i < PAGE_COUNT; i++) {
+    if (pageMetric(i) >= 0 && s == METRICS[pageMetric(i)].key) return i;
   }
   return 0;
 }

@@ -27,9 +27,10 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 
 ### Features
 
-- Swipe left and right between screens, with a smooth slide. The screen you were on is remembered as long as you have an SD card inserted.
+- Swipe left and right between screens. The screen you were on last is remembered, so it boot back up into that screen.
 - **Home** screen with four readings you choose, by default oil, coolant, boost and RPM.
-- Single reading screens for boost, oil temperature, coolant temperature, RPM, speed and battery voltage, each with oil and coolant temperature always shown at the bottom.
+- Single reading screens for boost, RPM, speed, battery voltage and intake air temperature, each with oil and coolant temperature always shown at the bottom.
+- An **oil and coolant** screen that shows both temperatures large, and a **load and throttle** screen that shows engine load and throttle position together.
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
 - Outside air temperature shown small in the top corner of every screen, only if the car reports it.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
@@ -39,11 +40,19 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - Boot animation with your own logo. Put a `logo.png` on the SD card to replace the default. This must be no larger than 1024x1024 and 1MB in size. I would suggest around 700x700 maximum for speed.
 - OTA updates over Wi-Fi from GitHub, with a Release or Beta channel.
 
+### Example screens
+
+In swipe order: Home, Boost, Oil and coolant, IAT, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
+
+<p align="center">
+  <img src="images/ventpuckScreens.png" alt="VentPuck screens"/>
+</p>
+
 ### Supported cars
 
 | Setting | Car | What you get |
 | --- | --- | --- |
-| Megane 3 RS | Renault Megane 3 RS (F4Rt) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
+| Megane 3 RS | Renault Megane 3 RS (X95) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
 | Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | Megane 4 RS | Renault Megane 4 RS (XFB) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings for now, BMW specific readings to come. |
@@ -99,8 +108,8 @@ accent=purple
 | `speed_unit` | `mph` or `kph` |
 | `boost_unit` | `bar`, `psi` or `kpa` |
 | `temp_unit` | `C` or `F` |
-| `start_screen` | `last`, `home`, `boost`, `oil`, `coolant`, `rpm`, `speed`, `voltage`, `zerosixty` or `faults` |
-| `home_items` | Four of `boost`, `oil`, `coolant`, `rpm`, `speed`, `voltage` |
+| `start_screen` | `last`, `home`, `boost`, `temps`, `rpm`, `speed`, `voltage`, `iat`, `load`, `zerosixty` or `faults` |
+| `home_items` | Four of `boost`, `oil`, `coolant`, `rpm`, `speed`, `voltage`, `iat`, `load`, `throttle` |
 | `brightness` | 5 to 100 |
 | `boot_animation` | `true` or `false` |
 | `dark_mode` | `true` or `false` |

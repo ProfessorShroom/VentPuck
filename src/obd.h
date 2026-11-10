@@ -15,17 +15,20 @@ struct LiveData {
   volatile float baroKpa = NAN;
   volatile float batteryV = NAN;
   volatile float ambientC = NAN;
+  volatile float iatC = NAN;
+  volatile float loadPct = NAN;
+  volatile float throttlePct = NAN;
   volatile uint32_t speedStamp = 0;
 };
 
 extern LiveData g_live;
 
-enum Metric : uint8_t { M_BOOST, M_OIL, M_COOLANT, M_RPM, M_SPEED, M_VOLTAGE };
+enum Metric : uint8_t { M_BOOST, M_OIL, M_COOLANT, M_RPM, M_SPEED, M_VOLTAGE, M_IAT, M_LOAD, M_THROTTLE };
 
-constexpr int WANT_AMBIENT = 7;
+constexpr int WANT_AMBIENT = 9;
 
 struct WantData {
-  volatile uint32_t main = 0x3F;
+  volatile uint32_t main = 0x1FF;
   volatile uint32_t secondary = 0;
 };
 

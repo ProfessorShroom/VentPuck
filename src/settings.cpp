@@ -53,7 +53,7 @@ static bool parseColour(String v, uint32_t& out) {
   return true;
 }
 
-static const char* METRIC_KEYS[] = {"boost", "oil", "coolant", "rpm", "speed", "voltage"};
+static const char* METRIC_KEYS[] = {"boost", "oil", "coolant", "rpm", "speed", "voltage", "iat", "load", "throttle"};
 
 static bool metricKeyValid(const String& k) {
   for (const char* m : METRIC_KEYS) {
@@ -191,7 +191,7 @@ static void applyKey(String key, String val) {
     if (val == "generic" || val == "meganers3" || val == "clio4rs" || val == "megane4rs" || val == "bmwe8x") g_settings.vehicle = val;
   } else if (key == "start_screen") {
     val.toLowerCase();
-    if (val == "last" || val == "home" || val == "zerosixty" || val == "faults" || metricKeyValid(val)) g_settings.startScreen = val;
+    if (val == "last" || val == "home" || val == "zerosixty" || val == "faults" || val == "temps" || metricKeyValid(val)) g_settings.startScreen = val;
   } else if (key == "home_items") {
     parseHomeItems(val);
   } else if (key.length()) {
@@ -247,8 +247,8 @@ static bool writeIni() {
   f.printf("speed_unit=%s\n", iniValue("speed_unit").c_str());
   f.printf("boost_unit=%s\n", iniValue("boost_unit").c_str());
   f.printf("temp_unit=%s\n\n", iniValue("temp_unit").c_str());
-  f.print("# Screens: start_screen is last, home, boost, oil, coolant, rpm, speed, voltage, zerosixty or faults\n");
-  f.print("# home_items are the four readings on the home screen, from boost, oil, coolant, rpm, speed, voltage\n");
+  f.print("# Screens: start_screen is last, home, boost, temps, rpm, speed, voltage, iat, load, zerosixty or faults\n");
+  f.print("# home_items are the four readings on the home screen, from boost, oil, coolant, rpm, speed, voltage, iat, load, throttle\n");
   f.printf("start_screen=%s\n", iniValue("start_screen").c_str());
   f.printf("home_items=%s\n\n", iniValue("home_items").c_str());
   f.print("# Display\n");

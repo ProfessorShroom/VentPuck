@@ -684,6 +684,18 @@ static void pollNeeded() {
       }
     }
   }
+  if (worked[0x0F] && need(M_IAT) && readValue(0x0F, v)) {
+    g_live.iatC = v;
+    any = true;
+  }
+  if (worked[0x04] && need(M_LOAD) && readValue(0x04, v)) {
+    g_live.loadPct = v;
+    any = true;
+  }
+  if (worked[0x11] && need(M_THROTTLE) && readValue(0x11, v)) {
+    g_live.throttlePct = v;
+    any = true;
+  }
   if (worked[0x46] && need(WANT_AMBIENT) && readValue(0x46, v)) {
     g_live.ambientC = v;
     any = true;
