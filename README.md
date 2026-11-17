@@ -66,7 +66,7 @@ Changing the car restarts the gauge.
 
 - **Display / controller** - a Waveshare ESP32-S3-Touch-AMOLED-1.75, which is an ESP32-S3 with a 1.75 inch AMOLED 466x466 round capacitive touch display.
 - **OBD2 adapter** - any Bluetooth OBD2 adapter that supports **BLE** ELM327-style adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work. I used the OBDLink CX as it supports a sleep function to reduce power drain when the car is parked for longer than a few days, but the cheaper ones will work fine.
-- **Power** - 12 V to 5 V buck converter on a switched fuse tap, so the gauge turns on and off with the ignition. You could also use a USB C cable plugged in to the 12v socket like a phone charger, but this is a lot less neat.
+- **Power** - 12 V to 5 V buck converter on a fuse piggyback, so the gauge turns on and off with the ignition. You could also use a USB C cable plugged in to the 12v socket like a phone charger, but this is a lot less neat.
 - **SD card (optional)** - for `settings.ini` and a custom `logo.png`. VentPuck works fine without one, and the on-screen menu saves your settings to the gauge itself.
 
 ### Settings
@@ -140,3 +140,13 @@ pio run -e ventpuck -t upload
 ### Changelog
 
 #### Latest Update
+
+**Version 1.0.0.0 - Initial Release**
+
+- **_1.0.0.0_** Inital Release of VentPuck
+
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x - Initial Release</strong></summary>
