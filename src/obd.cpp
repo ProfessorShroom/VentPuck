@@ -6,6 +6,8 @@
 #include "sdlog.h"
 #include "settings.h"
 #include "dtc.h"
+#include <Preferences.h>
+#include <math.h>
 
 static const char* ADAPTER_NAME = "OBDLink";
 
@@ -613,6 +615,38 @@ static String lineBuf;
 
 static bool pollAllMode = false;
 
+static float thrZero = NAN;
+static float thrSaved = NAN;
+static float thrRaw = NAN;
+static bool thrLoaded = false;
+
+static float throttleScaled(float raw) {
+  if (!thrLoaded) {
+    thrLoaded = true;
+    Preferences p;
+    if (p.begin("ventpuck", true)) {
+      thrZero = p.getFloat("thrZero", NAN);
+      p.end();
+    }
+    thrSaved = thrZero;
+  }
+  thrRaw = raw;
+  if (raw < 30.0f && (isnan(thrZero) || raw < thrZero)) thrZero = raw;
+  if (!isnan(thrZero) && (isnan(thrSaved) || thrSaved - thrZero >= 0.5f)) {
+    Preferences p;
+    if (p.begin("ventpuck", false)) {
+      p.putFloat("thrZero", thrZero);
+      p.end();
+      thrSaved = thrZero;
+    }
+  }
+  float z = isnan(thrZero) ? 0.0f : thrZero;
+  float out = (raw - z) * 100.0f / (100.0f - z);
+  if (out < 0.0f) out = 0.0f;
+  if (out > 100.0f) out = 100.0f;
+  return out;
+}
+
 static void pollNeeded() {
   static uint32_t cycle = 0;
   static uint32_t lastLog = 0;
@@ -694,7 +728,7 @@ static void pollNeeded() {
     any = true;
   }
   if (worked[0x11] && need(M_THROTTLE) && readValue(0x11, v)) {
-    g_live.throttlePct = v;
+    g_live.throttlePct = throttleScaled(v);
     any = true;
   }
   if (worked[0x46] && need(WANT_AMBIENT) && readValue(0x46, v)) {
@@ -704,10 +738,10 @@ static void pollNeeded() {
   if (!any) delay(30);
   if (millis() - lastLog > 1000) {
     lastLog = millis();
-    Log.printf("rpm %.0f speed %.0f coolant %.1f oil %.1f map %.1f baro %.1f batt %.2f | want %02X/%02X | %ums\n",
+    Log.printf("rpm %.0f speed %.0f coolant %.1f oil %.1f map %.1f baro %.1f batt %.2f load %.1f thr %.1f (raw %.1f) | want %02X/%02X | %ums\n",
                   (float)g_live.rpm, (float)g_live.speedKph, (float)g_live.coolantC, (float)g_live.oilC,
-                  (float)g_live.mapKpa, (float)g_live.baroKpa, (float)g_live.batteryV, (unsigned)mainMask,
-                  (unsigned)secMask, (unsigned)(millis() - t0));
+                  (float)g_live.mapKpa, (float)g_live.baroKpa, (float)g_live.batteryV, (float)g_live.loadPct,
+                  (float)g_live.throttlePct, thrRaw, (unsigned)mainMask, (unsigned)secMask, (unsigned)(millis() - t0));
   }
 }
 
