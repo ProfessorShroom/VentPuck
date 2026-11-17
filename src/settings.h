@@ -16,6 +16,7 @@ struct Settings {
   String tempUnit = "C";  // C | F
   int brightness = 80;  // percent, 5-100
   bool bootAnimation = true;
+  bool bootSound = true;
   bool darkMode = false;
   String accent = "purple";
   String vehicle = "generic";

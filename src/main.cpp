@@ -5,6 +5,7 @@
 #include "touch.h"
 #include "settings.h"
 #include "boot.h"
+#include "sound.h"
 #include "obd.h"
 #include "updater.h"
 #include "version.h"
@@ -30,6 +31,7 @@ void setup() {
   }
   displaySetBrightness(g_settings.brightness);
   bootStart();
+  if (g_settings.bootSound) soundPlayBoot();
 
   uint32_t waitStart = millis();
   while (bootRunning() && millis() - waitStart < 4000) {

@@ -78,7 +78,7 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "boot_animation", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent"};
+                                     "temp_unit", "brightness", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent"};
 
 static bool wifiKey(const String& k, int* slot, bool* isPassword) {
   String rest;
@@ -122,6 +122,7 @@ static String iniValue(const char* key) {
   if (k == "temp_unit") return g_settings.tempUnit;
   if (k == "brightness") return String(g_settings.brightness);
   if (k == "boot_animation") return g_settings.bootAnimation ? "true" : "false";
+  if (k == "boot_sound") return g_settings.bootSound ? "true" : "false";
   if (k == "dark_mode") return g_settings.darkMode ? "true" : "false";
   if (k == "vehicle") return g_settings.vehicle;
   if (k == "start_screen") return g_settings.startScreen;
@@ -183,6 +184,8 @@ static void applyKey(String key, String val) {
     g_settings.brightness = b < 5 ? 5 : (b > 100 ? 100 : b);
   } else if (key == "boot_animation") {
     g_settings.bootAnimation = parseBool(val, true);
+  } else if (key == "boot_sound") {
+    g_settings.bootSound = parseBool(val, true);
   } else if (key == "dark_mode") {
     g_settings.darkMode = parseBool(val, false);
   } else if (key == "vehicle") {
@@ -254,6 +257,7 @@ static bool writeIni() {
   f.print("# Display\n");
   f.printf("brightness=%s\n", iniValue("brightness").c_str());
   f.printf("boot_animation=%s\n", iniValue("boot_animation").c_str());
+  f.printf("boot_sound=%s\n", iniValue("boot_sound").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");
   f.printf("dark_mode=%s\n", iniValue("dark_mode").c_str());
   f.print("# Accent colour used in dark mode: purple, blue, cyan, green, yellow, orange, red, pink or white\n");
@@ -330,9 +334,10 @@ void settingsInit() {
     else if (writeIni()) Serial.println("Settings: no settings.ini found, created one on the card");
     loadLogo();
   }
-  Serial.printf("Settings: vehicle=%s update=%d wifi=%d colour1=#%06X colour2=#%06X units=%s/%s/%s brightness=%d boot_animation=%d\n",
+  Serial.printf("Settings: vehicle=%s update=%d wifi=%d colour1=#%06X colour2=#%06X units=%s/%s/%s brightness=%d boot_animation=%d boot_sound=%d\n",
                 g_settings.vehicle.c_str(), g_settings.update, wifiCount(), (unsigned)g_settings.colour1,
                 (unsigned)g_settings.colour2, g_settings.speedUnit.c_str(), g_settings.boostUnit.c_str(),
-                g_settings.tempUnit.c_str(), g_settings.brightness, g_settings.bootAnimation);
+                g_settings.tempUnit.c_str(), g_settings.brightness, g_settings.bootAnimation,
+                g_settings.bootSound);
   Serial.printf("Settings: start_screen=%s home_items=%s\n", g_settings.startScreen.c_str(), iniValue("home_items").c_str());
 }

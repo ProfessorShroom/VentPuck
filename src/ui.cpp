@@ -24,7 +24,9 @@ static const int LOAD_PAGE = 7;
 static const int RUN_PAGE = 8;
 static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 17;
+static const int MENU_ROWS = 18;
+// Row ids in the order they appear on screen. Boot sound (17) sits under boot animation.
+static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 16};
 
 struct MetricDef {
   const char* key;
@@ -645,6 +647,9 @@ static void menuText(int id, char* out, size_t n) {
     case 11:
       snprintf(out, n, "Boot animation: %s", g_settings.bootAnimation ? "On" : "Off");
       break;
+    case 17:
+      snprintf(out, n, "Boot sound: %s", g_settings.bootSound ? "On" : "Off");
+      break;
     case 12:
       snprintf(out, n, "Dark mode: %s", g_settings.darkMode ? "On" : "Off");
       break;
@@ -856,6 +861,8 @@ static void menuClick(lv_event_t* e) {
     g_settings.startScreen = START_OPTIONS[(cur + 1) % START_OPTION_COUNT];
   } else if (id == 11) {
     g_settings.bootAnimation = !g_settings.bootAnimation;
+  } else if (id == 17) {
+    g_settings.bootSound = !g_settings.bootSound;
   } else if (id == 12) {
     g_settings.darkMode = !g_settings.darkMode;
     applyTheme();
@@ -1114,7 +1121,8 @@ static void buildMenu(lv_obj_t* scr) {
   lv_obj_set_style_pad_row(menuObj, 12, 0);
   lv_obj_set_scroll_dir(menuObj, LV_DIR_VER);
   lv_obj_set_scrollbar_mode(menuObj, LV_SCROLLBAR_MODE_OFF);
-  for (int i = 0; i < MENU_ROWS; i++) {
+  for (int row = 0; row < MENU_ROWS; row++) {
+    int i = MENU_ORDER[row];
     lv_obj_t* b = lv_btn_create(menuObj);
     lv_obj_set_size(b, 340, 58);
     lv_obj_set_style_radius(b, 29, 0);
