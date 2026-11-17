@@ -31,7 +31,8 @@ void setup() {
   }
   displaySetBrightness(g_settings.brightness);
   bootStart();
-  if (g_settings.bootSound) soundPlayBoot();
+  // with the animation running, time the notes to start as the iris opens (1.5 s in, less ~50 ms of codec start-up)
+  if (g_settings.bootSound) soundPlayBoot(bootRunning() ? 1450 : 0);
 
   uint32_t waitStart = millis();
   while (bootRunning() && millis() - waitStart < 4000) {

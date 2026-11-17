@@ -4,15 +4,17 @@
 #include <Wire.h>
 #include <math.h>
 #include "ESP_I2S.h"
+#include "esp_heap_caps.h"
 #include "pin_config.h"
 
 static const uint8_t ES8311_ADDR = 0x18;
 static const uint32_t RATE = 16000;  // MCLK = 256 * 16 kHz = 4.096 MHz
-static const float VOLUME = 0.35f;  // keeps the small speaker clean
-static const int CHIME_MS = 900;
+static const float VOLUME = 0.45f;  // keeps the small speaker clean
+static const int CHIME_MS = 1000;
 
 static I2SClass i2s;
 static bool busy = false;
+static uint32_t startDelayMs = 0;
 
 static bool reg(uint8_t r, uint8_t v) {
   Wire.beginTransmission(ES8311_ADDR);
@@ -65,21 +67,25 @@ static bool codecInit() {
   return true;
 }
 
-// Two bell-like notes, E5 then B5, each with a quick attack and an exponential decay.
+// Five soft notes flicking up a pentatonic run (B4 D5 E5 F#5 B5), spaced wider as they go so the run settles.
+// Pure sines with a rounded 12 ms attack, so nothing sounds harsh on the small speaker.
 static float chime(float t) {
-  static const float NOTES[2][2] = {{0.0f, 659.25f}, {0.13f, 987.77f}};
+  static const float NOTES[5][2] = {
+      {0.00f, 493.88f}, {0.05f, 587.33f}, {0.11f, 659.25f}, {0.19f, 739.99f}, {0.30f, 987.77f}};
+  const float ATTACK = 0.012f;
   float s = 0;
-  for (auto& n : NOTES) {
-    float u = t - n[0];
+  for (int k = 0; k < 5; k++) {
+    float u = t - NOTES[k][0];
     if (u < 0) continue;
-    float env = (u < 0.005f ? u / 0.005f : 1.0f) * expf(-u * 5.0f);
-    float ph = 2.0f * (float)M_PI * n[1] * u;
-    s += env * (sinf(ph) + 0.25f * sinf(2.0f * ph));
+    float a = u < ATTACK ? 0.5f - 0.5f * cosf((float)M_PI * u / ATTACK) : 1.0f;
+    if (k == 4) a *= 0.8f;  // last note a touch softer
+    // short ring so the notes don't pile up and overdrive the speaker at the end of the run
+    s += a * expf(-u * 11.0f) * sinf(2.0f * (float)M_PI * NOTES[k][1] * u);
   }
-  float fadeOut = (CHIME_MS / 1000.0f - t) / 0.05f;  // no click at the end
+  float fadeOut = (CHIME_MS / 1000.0f - t) / 0.08f;  // no click at the end
   if (fadeOut > 1.0f) fadeOut = 1.0f;
   if (fadeOut < 0.0f) fadeOut = 0.0f;
-  return s * 0.5f * fadeOut;
+  return s * 0.41f * fadeOut;
 }
 
 static void writeSilence(int ms) {
@@ -89,23 +95,43 @@ static void writeSilence(int ms) {
 }
 
 static void playTask(void*) {
-  writeSilence(30);  // let the DAC settle before the amplifier comes on
-  digitalWrite(PA, HIGH);
-  writeSilence(20);
+  uint32_t t0 = millis();
 
-  int16_t buf[256];  // 128 stereo frames
-  int total = RATE * CHIME_MS / 1000;
-  for (int i = 0; i < total;) {
-    int n = 0;
-    for (; n < 128 && i < total; n++, i++) {
-      int16_t v = (int16_t)(chime((float)i / RATE) * VOLUME * 32767.0f);
-      buf[2 * n] = v;
-      buf[2 * n + 1] = v;
-    }
-    i2s.write((const uint8_t*)buf, n * 4);
+  // Render the whole chime up front. Working it out sample by sample during playback can fall behind while the
+  // boot animation is busy, and the I2S driver fills any gap with silence, which crackles.
+  const int total = RATE * CHIME_MS / 1000;
+  int16_t* pcm = (int16_t*)heap_caps_malloc(total * sizeof(int16_t), MALLOC_CAP_INTERNAL | MALLOC_CAP_8BIT);
+  if (!pcm) pcm = (int16_t*)heap_caps_malloc(total * sizeof(int16_t), MALLOC_CAP_8BIT);
+  if (pcm) {
+    for (int i = 0; i < total; i++) pcm[i] = (int16_t)(chime((float)i / RATE) * VOLUME * 32767.0f);
+  } else {
+    Serial.println("Sound: out of memory, no boot sound");
   }
+  uint32_t renderMs = millis() - t0;
 
-  writeSilence(40);
+  // wait out the rest of the delay; with nothing written the driver outputs silence and the amplifier stays off
+  uint32_t elapsed = millis() - t0;
+  if (startDelayMs > elapsed) vTaskDelay(pdMS_TO_TICKS(startDelayMs - elapsed));
+
+  uint32_t playStart = millis();
+  if (pcm) {
+    writeSilence(30);  // let the DAC settle before the amplifier comes on
+    digitalWrite(PA, HIGH);
+    writeSilence(20);
+
+    int16_t buf[256];  // 128 stereo frames
+    for (int i = 0; i < total;) {
+      int n = 0;
+      for (; n < 128 && i < total; n++, i++) buf[2 * n] = buf[2 * n + 1] = pcm[i];
+      i2s.write((const uint8_t*)buf, n * 4);
+    }
+    heap_caps_free(pcm);
+
+    // i2s.write returns once data is queued, and the DMA queue holds 90 ms, so pad past that before the amp goes off
+    writeSilence(150);
+  }
+  Serial.printf("Sound: rendered in %u ms, played in %u ms (chime is %d ms)\n", (unsigned)renderMs,
+                (unsigned)(millis() - playStart), CHIME_MS);
   digitalWrite(PA, LOW);
   i2s.end();
   reg(0x32, 0x00);  // DAC volume to minimum
@@ -114,8 +140,9 @@ static void playTask(void*) {
   vTaskDelete(nullptr);
 }
 
-void soundPlayBoot() {
+void soundPlayBoot(uint32_t delayMs) {
   if (busy) return;
+  startDelayMs = delayMs;
   pinMode(PA, OUTPUT);
   digitalWrite(PA, LOW);
 
@@ -131,7 +158,7 @@ void soundPlayBoot() {
     return;
   }
   busy = true;
-  if (xTaskCreatePinnedToCore(playTask, "bootSound", 4096, nullptr, 2, nullptr, 0) != pdPASS) {
+  if (xTaskCreatePinnedToCore(playTask, "bootSound", 4096, nullptr, 5, nullptr, 0) != pdPASS) {
     Serial.println("Sound: couldn't start playback task");
     i2s.end();
     busy = false;
