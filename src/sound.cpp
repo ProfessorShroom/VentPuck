@@ -119,7 +119,8 @@ void soundPlayBoot() {
   pinMode(PA, OUTPUT);
   digitalWrite(PA, LOW);
 
-  i2s.setPins(BCLKPIN, WSPIN, DOPIN, -1, MCLKPIN);
+  // pin_config names the data pins from the codec's side: DIPIN (GPIO 8) is the codec's input, so it's the ESP32's output.
+  i2s.setPins(BCLKPIN, WSPIN, DIPIN, -1, MCLKPIN);
   if (!i2s.begin(I2S_MODE_STD, RATE, I2S_DATA_BIT_WIDTH_16BIT, I2S_SLOT_MODE_STEREO)) {
     Serial.println("Sound: I2S init failed");
     return;
