@@ -1,6 +1,4 @@
 // Copyright © Charlie Howard 2026 All rights reserved
-//
-// LVGL memory hooks: prefer PSRAM, fall back to internal RAM.
 #pragma once
 #include <stddef.h>
 #include "esp_heap_caps.h"

@@ -1,6 +1,7 @@
 // Copyright © Charlie Howard 2026 All rights reserved
 
 #include "boot.h"
+#include "sdlog.h"
 #include <Arduino.h>
 #include <math.h>
 #include <lvgl.h>
@@ -18,15 +19,15 @@ extern const size_t logo_default_png_len;
 }
 
 static const int SCREEN = 466;
-static const int CX = 233;  // centre of the logo and of the iris
+static const int CX = 233;
 static const int CY = 175;
-static const int LOGO_PX = 208;  // on-screen size of the logo at the start
+static const int LOGO_PX = 208;
 static const int IRIS_END = 300;
-static const int RING_R = 400;  // fixed outer radius of the cover ring
+static const int RING_R = 400;
 static const int TOTAL_MS = 2700;
 
 static lv_obj_t *logoObj, *wordObj, *ringObj;
-static lv_img_dsc_t logoDsc;  // the PNG as stored
+static lv_img_dsc_t logoDsc;
 static lv_img_dsc_t logoScaled;
 static uint8_t* logoBuf = nullptr;
 static int baseZoom = 256;
@@ -41,10 +42,10 @@ static float clamp01(float x) { return x < 0 ? 0 : (x > 1 ? 1 : x); }
 static float easeOut(float x) { float u = 1.0f - x; return 1.0f - u * u * u; }
 static float easeIn(float x) { return x * x * x; }
 
-static int irisR = 1;  // current radius of the hole in the cover
+static int irisR = 1;
 
 static void ringDraw(lv_event_t* e) {
-  if (irisR >= RING_R) return;  // fully open
+  if (irisR >= RING_R) return;
   lv_draw_ctx_t* ctx = lv_event_get_draw_ctx(e);
   lv_draw_rect_dsc_t d;
   lv_draw_rect_dsc_init(&d);
@@ -136,17 +137,17 @@ static void bootDone(lv_anim_t*) {
     heap_caps_free(logoBuf);
     logoBuf = nullptr;
   }
-  Serial.printf("Boot animation finished after %u ms\n", (unsigned)(millis() - bootStartMs));
+  Log.printf("Boot animation finished after %u ms\n", (unsigned)(millis() - bootStartMs));
 }
 
 static bool prescaleLogo(int& outW, int& outH) {
   lv_img_decoder_dsc_t dec;
   if (lv_img_decoder_open(&dec, &logoDsc, lv_color_black(), 0) != LV_RES_OK || !dec.img_data) {
-    Serial.println("Logo: couldn't decode for pre-scaling, using the PNG directly");
+    Log.println("Logo: couldn't decode for pre-scaling, using the PNG directly");
     return false;
   }
   if (dec.header.cf != LV_IMG_CF_TRUE_COLOR_ALPHA && dec.header.cf != LV_IMG_CF_RAW_ALPHA) {
-    Serial.printf("Logo: unexpected decoded format %d, using the PNG directly\n", (int)dec.header.cf);
+    Log.printf("Logo: unexpected decoded format %d, using the PNG directly\n", (int)dec.header.cf);
     lv_img_decoder_close(&dec);
     return false;
   }
@@ -158,7 +159,7 @@ static bool prescaleLogo(int& outW, int& outH) {
   if (th < 1) th = 1;
   uint8_t* out = (uint8_t*)heap_caps_malloc((size_t)tw * th * 3, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!out) {
-    Serial.println("Logo: out of memory for pre-scaling, using the PNG directly");
+    Log.println("Logo: out of memory for pre-scaling, using the PNG directly");
     lv_img_decoder_close(&dec);
     return false;
   }
@@ -218,7 +219,7 @@ static void buildBoot(lv_obj_t* scr) {
   int w = logoDsc.header.w, h = logoDsc.header.h;
   if (prescaleLogo(w, h)) {
     logoSrc = &logoScaled;
-    baseZoom = 256;  // already the right size
+    baseZoom = 256;
   } else {
     int big = w > h ? w : h;
     baseZoom = 256 * LOGO_PX / big;
@@ -283,10 +284,10 @@ void bootShow() {
 }
 
 void bootStart() {
-  if (!logoObj) return;  // animation disabled
+  if (!logoObj) return;
   bootStartMs = millis();
   lv_anim_start(&bootAnim);
-  Serial.println("Boot animation started");
+  Log.println("Boot animation started");
 }
 
 bool bootRunning() { return logoObj != nullptr; }

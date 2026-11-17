@@ -9,15 +9,16 @@ struct Settings {
   String updateChannel = "release";  // release | beta
   String wifiSsid[WIFI_SLOTS];
   String wifiPassword[WIFI_SLOTS];
-  uint32_t colour1 = 0x1A0650;  // outer edge of the dial gradient
-  uint32_t colour2 = 0x3A12A8;  // middle of the dial gradient
+  uint32_t colour1 = 0x1A0650;  // outer
+  uint32_t colour2 = 0x3A12A8;  // middle
   String speedUnit = "mph";  // mph | kph
   String boostUnit = "bar";  // bar | psi | kpa
   String tempUnit = "C";  // C | F
-  int brightness = 80;  // percent, 5-100
+  int brightness = 80;  // 5-100
   bool bootAnimation = true;
   bool bootSound = true;
   bool darkMode = false;
+  bool sdLog = false;
   String accent = "purple";
   String vehicle = "generic";
   String startScreen = "last";
@@ -25,7 +26,7 @@ struct Settings {
 };
 
 extern Settings g_settings;
-extern bool g_sdOk;  // true if a card was found and mounted
+extern bool g_sdOk;
 extern uint8_t* g_logoPng;
 extern size_t g_logoLen;
 
@@ -33,3 +34,4 @@ void settingsInit();
 
 void settingsSave();
 int wifiCount();
+bool vehicleHasBoost();

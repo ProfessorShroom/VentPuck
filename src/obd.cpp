@@ -3,10 +3,11 @@
 #include <Arduino.h>
 #include <NimBLEDevice.h>
 #include "obd.h"
+#include "sdlog.h"
 #include "settings.h"
 #include "dtc.h"
 
-static const char* ADAPTER_NAME = "OBDLink";  // matches "OBDLink CX"
+static const char* ADAPTER_NAME = "OBDLink";
 
 static NimBLEClient* client = nullptr;
 static NimBLERemoteCharacteristic* txChar = nullptr;  // FFF2 (write)
@@ -91,25 +92,25 @@ static bool uuidHas(const NimBLEUUID& u, const char* fragment) {
 static bool connectAdapter() {
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
-  Serial.println("Scanning for OBDLink adapter (8 s)...");
+  Log.println("Scanning for OBDLink adapter (8 s)...");
   NimBLEScanResults results = scan->getResults(8000, false);
 
   const NimBLEAdvertisedDevice* target = nullptr;
   for (uint32_t i = 0; i < results.getCount(); i++) {
     const NimBLEAdvertisedDevice* d = results.getDevice(i);
     String name = d->getName().c_str();
-    Serial.printf("  found: %s [%s] type %u RSSI %d\n", name.length() ? name.c_str() : "(no name)",
+    Log.printf("  found: %s [%s] type %u RSSI %d\n", name.length() ? name.c_str() : "(no name)",
                   d->getAddress().toString().c_str(), d->getAddress().getType(), d->getRSSI());
     if (!target && name.indexOf(ADAPTER_NAME) >= 0) target = d;
   }
   if (!target) {
-    Serial.println("No OBDLink adapter found. Is it plugged in, with the ignition on?");
+    Log.println("No OBDLink adapter found. Is it plugged in, with the ignition on?");
     return false;
   }
 
   String targetAddr = target->getAddress().toString().c_str();
   if (targetAddr == "00:00:00:00:00:00") {
-    Serial.printf("Adapter address resolves to zero (stored bonds: %d), clearing bonds\n", NimBLEDevice::getNumBonds());
+    Log.printf("Adapter address resolves to zero (stored bonds: %d), clearing bonds\n", NimBLEDevice::getNumBonds());
     NimBLEDevice::deleteAllBonds();
     return false;
   }
@@ -123,23 +124,23 @@ static bool connectAdapter() {
   txChar = nullptr;
   client = NimBLEDevice::createClient();
   if (!client) {
-    Serial.println("Couldn't create a BLE client.");
+    Log.println("Couldn't create a BLE client.");
     return false;
   }
-  Serial.printf("Connecting to %s (type %u)...\n", targetAddr.c_str(), target->getAddress().getType());
+  Log.printf("Connecting to %s (type %u)...\n", targetAddr.c_str(), target->getAddress().getType());
   if (!client->connect(target)) {
-    Serial.println("Connection failed.");
+    Log.println("Connection failed.");
     return false;
   }
-  Serial.printf("Connected, MTU %u\n", client->getMTU());
+  Log.printf("Connected, MTU %u\n", client->getMTU());
 
-  Serial.printf("Secure connection: %s\n", client->secureConnection() ? "ok" : "not established");
+  Log.printf("Secure connection: %s\n", client->secureConnection() ? "ok" : "not established");
 
-  Serial.println("Services:");
+  Log.println("Services:");
   for (auto* svc : client->getServices(true)) {
-    Serial.printf("  service %s\n", svc->getUUID().toString().c_str());
+    Log.printf("  service %s\n", svc->getUUID().toString().c_str());
     for (auto* chr : svc->getCharacteristics(true)) {
-      Serial.printf("    char %s%s%s%s\n", chr->getUUID().toString().c_str(),
+      Log.printf("    char %s%s%s%s\n", chr->getUUID().toString().c_str(),
                     chr->canNotify() ? " notify" : "", chr->canWrite() ? " write" : "",
                     chr->canWriteNoResponse() ? " writeNR" : "");
       if (uuidHas(svc->getUUID(), "fff0")) {
@@ -150,14 +151,14 @@ static bool connectAdapter() {
   }
 
   if (!rxChar || !txChar) {
-    Serial.println("Couldn't find the FFF0 serial service (FFF1 notify / FFF2 write).");
+    Log.println("Couldn't find the FFF0 serial service (FFF1 notify / FFF2 write).");
     return false;
   }
   if (!rxChar->subscribe(true, onNotify)) {
-    Serial.println("Couldn't subscribe to notifications.");
+    Log.println("Couldn't subscribe to notifications.");
     return false;
   }
-  Serial.println("Subscribed, link ready.\n");
+  Log.println("Subscribed, link ready.\n");
   return true;
 }
 
@@ -293,16 +294,16 @@ static bool readDidValue(uint16_t did, float& v) {
 }
 
 static void initAdapter() {
-  Serial.println("--- Initialising adapter ---");
+  Log.println("--- Initialising adapter ---");
   const char* init[] = {"ATZ", "ATE0", "ATL0", "ATS0", "ATH0", "ATSP0"};
   for (const char* c : init) {
     String r = cmd(c, c == init[0] ? 6000 : 3000);
-    Serial.printf("%s -> %s\n", c, r.c_str());
+    Log.printf("%s -> %s\n", c, r.c_str());
     if (c == init[0]) delay(300);
   }
   const char* info[] = {"ATI", "STI", "STDI", "ATRV"};
   for (const char* c : info) {
-    Serial.printf("%s -> %s\n", c, cmd(c, 3000).c_str());
+    Log.printf("%s -> %s\n", c, cmd(c, 3000).c_str());
   }
 }
 
@@ -314,22 +315,22 @@ static void speedRate(uint32_t ms) {
     if (readPid(0x0D, d, 4) > 0) n++;
   }
   float secs = (millis() - start) / 1000.0f;
-  Serial.printf("Speed-only polling: %d reads in %.1f s = %.1f reads/s\n", n, secs, n / secs);
+  Log.printf("Speed-only polling: %d reads in %.1f s = %.1f reads/s\n", n, secs, n / secs);
 }
 
 static void summaryLine(const char* screen, bool ok, const char* detail) {
-  Serial.printf("  %-10s %s  %s\n", screen, ok ? "OK    " : "FAILED", detail);
+  Log.printf("  %-10s %s  %s\n", screen, ok ? "OK    " : "FAILED", detail);
 }
 
 static bool testDid(uint16_t did, const char* name, const char* unit, float& out) {
   bool ok = readDidValue(did, out);
-  if (ok) Serial.printf("  %-24s (22%04X): %.1f %s\n", name, did, out, unit);
-  else Serial.printf("  %-24s (22%04X): no reply\n", name, did);
+  if (ok) Log.printf("  %-24s (22%04X): %.1f %s\n", name, did, out, unit);
+  else Log.printf("  %-24s (22%04X): no reply\n", name, did);
   return ok;
 }
 
 static void probeRenault() {
-  Serial.println("\n--- Renault engine ECU requests (service 22 to 7E0) ---");
+  Log.println("\n--- Renault engine ECU requests (service 22 to 7E0) ---");
   cmd("ATSH7E0", 3000);
   float v;
   float boostMbar = NAN;
@@ -340,7 +341,7 @@ static void probeRenault() {
   renaultBoost = testDid(0x2401, "Boost pressure", "mbar", boostMbar);
   if (renaultBoost) {
     boostAbsolute = boostMbar > 600.0f;
-    Serial.printf("  Boost pressure looks %s\n", boostAbsolute ? "absolute (about atmospheric at idle)" : "relative (about zero at idle)");
+    Log.printf("  Boost pressure looks %s\n", boostAbsolute ? "absolute (about atmospheric at idle)" : "relative (about zero at idle)");
   }
   renaultVolt = testDid(0x2005, "Battery voltage", "V", v);
   if (renaultVolt) g_live.batteryV = v;
@@ -348,7 +349,7 @@ static void probeRenault() {
   testDid(0x240B, "Intake manifold pressure", "mbar", extra);
   testDid(0x2402, "Boost setpoint", "hPa", extra);
   if (!renaultOil && !renaultBoost && !renaultBaro && !renaultVolt) {
-    Serial.println("  No replies, going back to standard OBD addressing");
+    Log.println("  No replies, going back to standard OBD addressing");
     cmd("ATSH7DF", 3000);
   }
 }
@@ -441,10 +442,10 @@ static bool bmwReadOil(float& out) {
 }
 
 static void probeBmw() {
-  Serial.println("\n--- BMW engine ECU request (22 4402 to the DME at 0x12) ---");
+  Log.println("\n--- BMW engine ECU request (22 4402 to the DME at 0x12) ---");
   bmwOil = false;
   if (worked[0x5C]) {
-    Serial.println("  Standard PID 5C already works, so no BMW request is needed");
+    Log.println("  Standard PID 5C already works, so no BMW request is needed");
     return;
   }
   const char* names[] = {"raw frame, reply filter 612", "raw frame, no reply filter", "extended addressing 12"};
@@ -453,28 +454,28 @@ static void probeBmw() {
     int n = 0;
     String reply;
     bool ok = bmwQuery(v, d, &n, &reply);
-    Serial.printf("  variant %d (%s): %s\n", v, names[v], reply.c_str());
+    Log.printf("  variant %d (%s): %s\n", v, names[v], reply.c_str());
     if (!ok) continue;
     float a, b;
     bmwDecode(d, n, &a, &b);
     float coolant = NAN;
     readValue(0x05, coolant);
-    Serial.printf("  got %d byte(s), reading A %.1f C, reading B %.1f C, coolant %.1f C\n", n, a, b, coolant);
+    Log.printf("  got %d byte(s), reading A %.1f C, reading B %.1f C, coolant %.1f C\n", n, a, b, coolant);
     bool pa = bmwPlausible(a), pb = bmwPlausible(b);
     if (pa && pb && !isnan(coolant)) bmwFormula = fabsf(a - coolant) <= fabsf(b - coolant) ? 0 : 1;
     else bmwFormula = pa ? 0 : 1;
     bmwVariant = v;
     bmwOil = true;
     g_live.oilC = bmwFormula == 0 ? a : b;
-    Serial.printf("  using variant %d and reading %c\n", v, bmwFormula == 0 ? 'A' : 'B');
+    Log.printf("  using variant %d and reading %c\n", v, bmwFormula == 0 ? 'A' : 'B');
     break;
   }
-  if (!bmwOil) Serial.println("  No usable reply from the DME, oil temperature stays unavailable");
+  if (!bmwOil) Log.println("  No usable reply from the DME, oil temperature stays unavailable");
   bmwRestore();
 }
 
 static void printSummary() {
-  Serial.println("\n--- Summary: will each planned screen work? ---");
+  Log.println("\n--- Summary: will each planned screen work? ---");
   summaryLine("RPM", worked[0x0C], "PID 0C");
   summaryLine("Speed", worked[0x0D], "PID 0D");
   summaryLine("Coolant", worked[0x05], "PID 05");
@@ -490,56 +491,56 @@ static void printSummary() {
   bool o2Volts = worked[0x14] || worked[0x15];
   summaryLine("Lambda", lambdaOk,
               lambdaOk ? "lambda PIDs" : (o2Volts ? "only O2 voltage PIDs" : "no O2 PIDs"));
-  Serial.println("Check the values above against the car: coolant vs the dash gauge, speed vs the speedo,");
-  Serial.println("RPM at idle, and MAP/boost near 0 bar at idle.\n");
+  Log.println("Check the values above against the car: coolant vs the dash gauge, speed vs the speedo,");
+  Log.println("RPM at idle, and MAP/boost near 0 bar at idle.\n");
 }
 
 static void probe() {
   memset(supported, 0, sizeof supported);
   memset(worked, 0, sizeof worked);
-  Serial.println("\n--- Probing supported PIDs ---");
+  Log.println("\n--- Probing supported PIDs ---");
 
-  Serial.printf("0100 warm-up -> %s\n", cmd("0100", 10000).c_str());
-  Serial.printf("ATDP -> %s\n", cmd("ATDP", 3000).c_str());
+  Log.printf("0100 warm-up -> %s\n", cmd("0100", 10000).c_str());
+  Log.printf("ATDP -> %s\n", cmd("ATDP", 3000).c_str());
 
   uint8_t d[8];
   for (int base = 0x00; base <= 0x60; base += 0x20) {
     int n = readPid(base, d, 4);
     if (n < 4) {
-      Serial.printf("PID %02X: no valid reply (ignition on? engine running?)\n", base);
+      Log.printf("PID %02X: no valid reply (ignition on? engine running?)\n", base);
       break;
     }
     for (int i = 0; i < 32; i++) {
       if (d[i / 8] & (0x80 >> (i % 8))) supported[base + 1 + i] = true;
     }
-    if (!(d[3] & 0x01)) break;  // next range not supported
+    if (!(d[3] & 0x01)) break;
   }
 
-  Serial.print("Supported PIDs:");
+  Log.print("Supported PIDs:");
   for (int p = 1; p <= 0x80; p++) {
-    if (supported[p]) Serial.printf(" %02X", p);
+    if (supported[p]) Log.printf(" %02X", p);
   }
-  Serial.println();
+  Log.println();
 
-  Serial.println("\nKey readings:");
+  Log.println("\nKey readings:");
   for (const KeyPid& k : KEYS) {
     if (!supported[k.pid]) {
-      Serial.printf("  %-18s (01%02X): NOT supported\n", k.name, k.pid);
+      Log.printf("  %-18s (01%02X): NOT supported\n", k.name, k.pid);
       continue;
     }
     float v;
     if (readValue(k.pid, v)) {
       worked[k.pid] = true;
-      Serial.printf("  %-18s (01%02X): supported, %.*f %s\n", k.name, k.pid, decimals(k), v, k.unit);
+      Log.printf("  %-18s (01%02X): supported, %.*f %s\n", k.name, k.pid, decimals(k), v, k.unit);
     } else {
-      Serial.printf("  %-18s (01%02X): supported, but no usable reply\n", k.name, k.pid);
+      Log.printf("  %-18s (01%02X): supported, but no usable reply\n", k.name, k.pid);
     }
   }
   if (g_settings.vehicle == "meganers3" || g_settings.vehicle == "clio4rs" || g_settings.vehicle == "megane4rs") probeRenault();
-  if (g_settings.vehicle == "bmwe8x") probeBmw();
+  if (g_settings.vehicle == "bmwe8x" || g_settings.vehicle == "bmwe8xturbo") probeBmw();
   printSummary();
   if (supported[0x0D]) speedRate(3000);
-  Serial.println("--- Probe done ---\n");
+  Log.println("--- Probe done ---\n");
 }
 
 static void pollOnce() {
@@ -599,13 +600,13 @@ static void pollOnce() {
   }
 
   if (!isnan(map)) {
-    float b = isnan(baro) ? 101.3f : baro;  // assume sea level if baro isn't available
+    float b = isnan(baro) ? 101.3f : baro;
     char buf[48];
     snprintf(buf, sizeof buf, "BOOST %.2f bar | ", (map - b) / 100.0f);
     line += buf;
   }
 
-  Serial.printf("%s%ums\n", line.c_str(), (unsigned)(millis() - t0));
+  Log.printf("%s%ums\n", line.c_str(), (unsigned)(millis() - t0));
 }
 
 static String lineBuf;
@@ -703,7 +704,7 @@ static void pollNeeded() {
   if (!any) delay(30);
   if (millis() - lastLog > 1000) {
     lastLog = millis();
-    Serial.printf("rpm %.0f speed %.0f coolant %.1f oil %.1f map %.1f baro %.1f batt %.2f | want %02X/%02X | %ums\n",
+    Log.printf("rpm %.0f speed %.0f coolant %.1f oil %.1f map %.1f baro %.1f batt %.2f | want %02X/%02X | %ums\n",
                   (float)g_live.rpm, (float)g_live.speedKph, (float)g_live.coolantC, (float)g_live.oilC,
                   (float)g_live.mapKpa, (float)g_live.baroKpa, (float)g_live.batteryV, (unsigned)mainMask,
                   (unsigned)secMask, (unsigned)(millis() - t0));
@@ -724,7 +725,7 @@ static void handleDtcCommand() {
     String r = cmd("03", 6000);
     DtcList list;
     dtcParse(r.c_str(), &list);
-    Serial.printf("DTC scan reply: %s | %d code(s)\n", r.c_str(), list.count);
+    Log.printf("DTC scan reply: %s | %d code(s)\n", r.c_str(), list.count);
     if (list.count == 0 && replyHasFailure(r)) {
       g_dtc.count = 0;
       g_dtc.state = DTCS_ERROR;
@@ -736,7 +737,7 @@ static void handleDtcCommand() {
   } else if (c == DTC_CLEAR) {
     g_dtc.state = DTCS_SCANNING;
     String r = cmd("04", 6000);
-    Serial.printf("DTC clear reply: %s\n", r.c_str());
+    Log.printf("DTC clear reply: %s\n", r.c_str());
     if (r.indexOf("44") >= 0 && !replyHasFailure(r)) {
       g_dtc.count = 0;
       g_dtc.state = DTCS_CLEARED;
@@ -757,16 +758,16 @@ static void handleSerial() {
     if (lineBuf.length()) {
       if (lineBuf.equalsIgnoreCase("poll off")) {
         pollEnabled = false;
-        Serial.println("Polling off");
+        Log.println("Polling off");
       } else if (lineBuf.equalsIgnoreCase("poll on")) {
         pollEnabled = true;
-        Serial.println("Polling on");
+        Log.println("Polling on");
       } else if (lineBuf.equalsIgnoreCase("poll all")) {
         pollAllMode = true;
-        Serial.println("Polling everything");
+        Log.println("Polling everything");
       } else if (lineBuf.equalsIgnoreCase("poll ui")) {
         pollAllMode = false;
-        Serial.println("Polling what the screen needs");
+        Log.println("Polling what the screen needs");
       } else if (lineBuf.equalsIgnoreCase("probe")) {
         probe();
       } else if (lineBuf.equalsIgnoreCase("bmw")) {
@@ -774,7 +775,7 @@ static void handleSerial() {
       } else if (lineBuf.equalsIgnoreCase("reinit")) {
         initAdapter();
       } else {
-        Serial.printf("> %s\n< %s\n", lineBuf.c_str(), cmd(lineBuf).c_str());
+        Log.printf("> %s\n< %s\n", lineBuf.c_str(), cmd(lineBuf).c_str());
       }
     }
     lineBuf = "";
@@ -786,18 +787,18 @@ WantData g_want;
 DtcStatus g_dtc;
 
 static void obdTask(void*) {
-  Serial.println("\nVentPuck OBDLink CX test");
+  Log.println("\nVentPuck OBDLink CX test");
   NimBLEDevice::init("VentPuck");
   NimBLEDevice::setMTU(247);
   NimBLEDevice::setSecurityAuth(true, false, true);
   const uint8_t keyDistEnc = 0x01;
   NimBLEDevice::setSecurityInitKey(keyDistEnc);
   NimBLEDevice::setSecurityRespKey(keyDistEnc);
-  Serial.printf("Stored bonds: %d\n", NimBLEDevice::getNumBonds());
+  Log.printf("Stored bonds: %d\n", NimBLEDevice::getNumBonds());
 
   g_live.state = OBD_SEARCHING;
   while (!connectAdapter()) {
-    Serial.println("Retrying in 3 s...\n");
+    Log.println("Retrying in 3 s...\n");
     delay(3000);
   }
   g_live.state = OBD_CONNECTED;
@@ -807,7 +808,7 @@ static void obdTask(void*) {
 
   for (;;) {
     if (!client || !client->isConnected()) {
-      Serial.println("Disconnected, restarting...");
+      Log.println("Disconnected, restarting...");
       delay(1000);
       ESP.restart();
     }

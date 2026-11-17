@@ -53,10 +53,12 @@ In swipe order: Home, Boost, Oil and coolant, IAT, RPM, Speed, Voltage, Load and
 | Setting | Car | What you get |
 | --- | --- | --- |
 | Megane 3 RS | Renault Megane 3 RS (X95) | Standard OBD2 readings plus oil temperature, boost, battery voltage and barometric pressure from the engine ECU. |
-| Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
 | Megane 4 RS | Renault Megane 4 RS (XFB) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
-| BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings plus an experimental oil temperature request to the engine computer, still being tested. |
-| Generic | Any car with OBD2 | Standard OBD2 readings only, so some screens such as oil temperature may show nothing. |
+| Clio 4 RS | Renault Clio 4 RS (X98) | Same requests as the Megane 3 RS: oil temperature, boost, battery voltage and barometric pressure from the engine ECU. Untested so far. |
+| BMW E8x | BMW 1 Series E8x (E81 / E82 / E87 / E88) | Standard OBD2 readings plus an experimental oil temperature request to the engine computer, still being tested. No boost screen. |
+| BMW E8x 135i/1M | BMW 135i and 1M (E82 / E88) | Same as BMW E8x, with the boost screen. |
+| Generic Boost | Any turbo or supercharged car with OBD2 | Standard OBD2 readings only, so some screens such as oil temperature may show nothing. |
+| Generic NA | Any naturally aspirated cars with OBD2 | Same as Generic Boost, without the boost screen. |
 
 Changing the car restarts the gauge.
 
@@ -97,11 +99,12 @@ boot_animation=true
 boot_sound=true
 dark_mode=false
 accent=purple
+sd_log=false
 ```
 
 | Key | Values |
 | --- | --- |
-| `vehicle` | `generic`, `meganers3`, `clio4rs`, `megane4rs`, `bmwe8x` |
+| `vehicle` | `generic` (Generic Boost), `genericna` (Generic NA), `meganers3`, `clio4rs`, `megane4rs`, `bmwe8x`, `bmwe8xturbo` (135i / 1M) |
 | `update` | `true` or `false`, whether to check for updates when it starts |
 | `update_channel` | `release` or `beta` |
 | `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
@@ -116,6 +119,7 @@ accent=purple
 | `boot_sound` | `true` or `false`, a short chime through the speaker at start up |
 | `dark_mode` | `true` or `false` |
 | `accent` | Dark mode accent colour: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink` or `white` |
+| `sd_log` | `true` or `false`, writes the serial output to `ventpuck.log` on the card (also in the menu as **SD logging**) |
 
 The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check for updates.
 

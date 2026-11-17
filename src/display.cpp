@@ -1,8 +1,7 @@
 // Copyright © Charlie Howard 2026 All rights reserved
-//
-// Display glue for the Waveshare ESP32-S3-Touch-AMOLED-1.75, following Waveshare's own LVGL
 
 #include "display.h"
+#include "sdlog.h"
 #include <Arduino.h>
 #include <lvgl.h>
 #include "Arduino_GFX_Library.h"
@@ -31,7 +30,7 @@ static void rounderCb(lv_disp_drv_t*, lv_area_t* area) {
 
 void displayInit() {
   gfx->begin();
-  gfx->setBrightness(0);  // stay dark until the first frame is ready
+  gfx->setBrightness(0);
   gfx->fillScreen(0x0000);
 
   lv_init();
@@ -45,9 +44,6 @@ void displayInit() {
   dispDrv.rounder_cb = rounderCb;
   dispDrv.draw_buf = &drawBuf;
   lv_disp_drv_register(&dispDrv);
-
-  // LVGL reads millis() directly (LV_TICK_CUSTOM in lv_conf.h), so its clock can't be starved by the
-  // Bluetooth stack starting up on core 0.
 }
 
 void displaySetBrightness(int percent) {
@@ -56,8 +52,7 @@ void displaySetBrightness(int percent) {
   gfx->setBrightness((uint8_t)(percent * 255 / 100));
 }
 
-// Logs any frame that takes longer than 40 ms during the first 8 s, to see how the boot animation performs.
-// Set to 1 to enable.
+// slow frame logging
 #define FRAME_DEBUG 0
 
 void displayLoop() {
@@ -65,7 +60,7 @@ void displayLoop() {
   uint32_t t0 = millis();
   lv_timer_handler();
   uint32_t dt = millis() - t0;
-  if (dt > 40 && t0 < 8000) Serial.printf("slow frame: %u ms at %u ms\n", (unsigned)dt, (unsigned)t0);
+  if (dt > 40 && t0 < 8000) Log.printf("slow frame: %u ms at %u ms\n", (unsigned)dt, (unsigned)t0);
 #else
   lv_timer_handler();
 #endif

@@ -1,5 +1,6 @@
 // Copyright © Charlie Howard 2026 All rights reserved
 #include "touch.h"
+#include "sdlog.h"
 #include <Arduino.h>
 #include <Wire.h>
 #include <lvgl.h>
@@ -54,10 +55,10 @@ static void readCb(lv_indev_drv_t*, lv_indev_data_t* data) {
 void touchInit() {
   touch.setPins(TP_RESET, TP_INT);
   if (!touch.begin(Wire, CST92XX_SLAVE_ADDRESS, IIC_SDA, IIC_SCL)) {
-    Serial.println("Touch: CST9217 init failed, continuing without touch");
+    Log.println("Touch: CST9217 init failed, continuing without touch");
     return;
   }
-  Serial.printf("Touch: %s ready\n", touch.getModelName());
+  Log.printf("Touch: %s ready\n", touch.getModelName());
   pinMode(TP_INT, INPUT_PULLUP);
   attachInterrupt(digitalPinToInterrupt(TP_INT), onTouchInterrupt, FALLING);
   touchReady = true;

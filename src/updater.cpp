@@ -1,5 +1,6 @@
 // Copyright © Charlie Howard 2026 All rights reserved
 #include "updater.h"
+#include "sdlog.h"
 #include <Arduino.h>
 #include <WiFi.h>
 #include <WiFiMulti.h>
@@ -116,7 +117,7 @@ static bool connectWifi(uint32_t perNetworkMs) {
     if (g_settings.wifiSsid[i].length() > 0) multi.addAP(g_settings.wifiSsid[i].c_str(), g_settings.wifiPassword[i].c_str());
   }
   bool ok = multi.run(perNetworkMs) == WL_CONNECTED;
-  if (ok) Serial.printf("Update: joined '%s'\n", WiFi.SSID().c_str());
+  if (ok) Log.printf("Update: joined '%s'\n", WiFi.SSID().c_str());
   return ok;
 }
 
@@ -149,7 +150,7 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
   http.addHeader("Accept", "application/vnd.github+json");
   int code = http.GET();
   if (code != 200) {
-    Serial.printf("Update: GitHub answered %d (%s)\n", code, HTTPClient::errorToString(code).c_str());
+    Log.printf("Update: GitHub answered %d (%s)\n", code, HTTPClient::errorToString(code).c_str());
     *error = code < 0 ? "Couldn't reach GitHub" : "GitHub didn't give a release list";
     http.end();
     return false;
@@ -181,7 +182,7 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
   }
   http.end();
   body[got] = 0;
-  Serial.printf("Update: release list is %u bytes (server said %d)\n", (unsigned)got, bodyLen);
+  Log.printf("Update: release list is %u bytes (server said %d)\n", (unsigned)got, bodyLen);
   JsonDocument filter;
   filter[0]["tag_name"] = true;
   filter[0]["draft"] = true;
@@ -192,7 +193,7 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
   JsonDocument doc;
   DeserializationError je = deserializeJson(doc, (const uint8_t*)body, got, DeserializationOption::Filter(filter));
   if (je) {
-    Serial.printf("Update: bad release list (%s), starts: %.60s\n", je.c_str(), (const char*)body);
+    Log.printf("Update: bad release list (%s), starts: %.60s\n", je.c_str(), (const char*)body);
     heap_caps_free(body);
     *error = "Couldn't read the release list";
     return false;
@@ -247,7 +248,7 @@ static bool downloadAndFlash(const Candidate& c, const char** error) {
   }
   int code = http.GET();
   if (code != 200) {
-    Serial.printf("Update: download answered %d (%s)\n", code, HTTPClient::errorToString(code).c_str());
+    Log.printf("Update: download answered %d (%s)\n", code, HTTPClient::errorToString(code).c_str());
     *error = "Couldn't download the update";
     http.end();
     return false;
@@ -259,7 +260,7 @@ static bool downloadAndFlash(const Candidate& c, const char** error) {
     return false;
   }
   if (!Update.begin(len)) {
-    Serial.printf("Update: begin failed: %s\n", Update.errorString());
+    Log.printf("Update: begin failed: %s\n", Update.errorString());
     *error = "Not enough room for the update";
     http.end();
     return false;
@@ -310,13 +311,13 @@ static bool downloadAndFlash(const Candidate& c, const char** error) {
     hexOf(digest, 32, hex);
     if (strcasecmp(hex, c.sha) != 0) {
       Update.abort();
-      Serial.printf("Update: checksum mismatch, got %s expected %s\n", hex, c.sha);
+      Log.printf("Update: checksum mismatch, got %s expected %s\n", hex, c.sha);
       *error = "The update failed its checksum";
       return false;
     }
   }
   if (!Update.end(true)) {
-    Serial.printf("Update: end failed: %s\n", Update.errorString());
+    Log.printf("Update: end failed: %s\n", Update.errorString());
     *error = "The update wasn't valid";
     return false;
   }
@@ -355,11 +356,11 @@ void updaterBoot() {
     uiClose();
     return;
   }
-  Serial.printf("Update: running %s, channel %s, %d Wi-Fi network(s) set\n", FW_VERSION, g_settings.updateChannel.c_str(),
+  Log.printf("Update: running %s, channel %s, %d Wi-Fi network(s) set\n", FW_VERSION, g_settings.updateChannel.c_str(),
                 wifiCount());
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
   if (!connectWifi(forced ? 12000 : 10000)) {
-    Serial.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
+    Log.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
       pumpFor(2500);
@@ -368,10 +369,10 @@ void updaterBoot() {
     uiClose();
     return;
   }
-  Serial.println("Update: Wi-Fi connected, syncing the clock");
+  Log.println("Update: Wi-Fi connected, syncing the clock");
   uiShow("UPDATES", "Checking the time...", -1);
   if (!syncClock()) {
-    Serial.println("Update: clock didn't sync");
+    Log.println("Update: clock didn't sync");
     if (forced) {
       uiShow("UPDATES", "Couldn't get the time", -1);
       pumpFor(2500);
@@ -380,7 +381,7 @@ void updaterBoot() {
     uiClose();
     return;
   }
-  Serial.println("Update: clock set, reading the release list");
+  Log.println("Update: clock set, reading the release list");
   FwVersion current;
   versionParse(FW_VERSION, &current);
   bool beta = g_settings.updateChannel == "beta";
@@ -394,13 +395,13 @@ void updaterBoot() {
       pumpFor(3000);
     }
   } else if (!c.found) {
-    Serial.printf("Update: %s is the newest on the %s channel\n", FW_VERSION, beta ? "beta" : "release");
+    Log.printf("Update: %s is the newest on the %s channel\n", FW_VERSION, beta ? "beta" : "release");
     if (forced) {
       uiShow("UPDATES", "Up to date", -1);
       pumpFor(2000);
     }
   } else {
-    Serial.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
+    Log.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
     if (!cover) uiOpen();
     char line[64];
     snprintf(line, sizeof line, "Version %s", c.tag);
@@ -410,7 +411,7 @@ void updaterBoot() {
       pumpFor(1200);
       ESP.restart();
     }
-    Serial.printf("Update: failed: %s\n", error);
+    Log.printf("Update: failed: %s\n", error);
     uiShow("UPDATE FAILED", error, -1);
     pumpFor(3500);
   }

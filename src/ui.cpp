@@ -13,20 +13,21 @@
 #include "launch.h"
 #include "updater.h"
 #include "version.h"
+#include "sdlog.h"
 
 LV_FONT_DECLARE(font_digits);
 
 static const int SCREEN = 466;
 static const int METRIC_COUNT = 9;
 static const int PAGE_COUNT = 10;
+static const int BOOST_PAGE = 1;
 static const int TEMPS_PAGE = 2;
 static const int LOAD_PAGE = 7;
 static const int RUN_PAGE = 8;
 static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 18;
-// Row ids in the order they appear on screen. Boot sound (17) sits under boot animation.
-static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 16};
+static const int MENU_ROWS = 19;
+static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 16};
 
 struct MetricDef {
   const char* key;
@@ -180,6 +181,23 @@ static int metricIndex(const String& key) {
     if (key == METRICS[i].key) return i;
   }
   return 0;
+}
+
+static bool pageEnabled(int p) { return p != BOOST_PAGE || vehicleHasBoost(); }
+
+static void fixHomeSlots() {
+  if (vehicleHasBoost()) return;
+  for (int i = 0; i < HOME_SLOTS; i++) {
+    if (g_settings.homeItems[i] != "boost") continue;
+    for (int m = 1; m < METRIC_COUNT; m++) {
+      bool used = false;
+      for (int j = 0; j < HOME_SLOTS; j++) used |= g_settings.homeItems[j] == METRICS[m].key;
+      if (!used) {
+        g_settings.homeItems[i] = METRICS[m].key;
+        break;
+      }
+    }
+  }
 }
 
 static void setText(lv_obj_t* l, const char* t) {
@@ -555,6 +573,11 @@ static void slideDone(lv_anim_t*) { slideSettle(); }
 static void showPage(int p, bool save, int dir = 0) {
   if (p < 0) p = PAGE_COUNT - 1;
   if (p >= PAGE_COUNT) p = 0;
+  if (!pageEnabled(p)) {
+    p += dir < 0 ? -1 : 1;
+    if (p < 0) p = PAGE_COUNT - 1;
+    if (p >= PAGE_COUNT) p = 0;
+  }
   if (animNew) slideFinish();
   int prev = curPage;
   curPage = p;
@@ -604,11 +627,13 @@ static void capitalise(char* s) {
 }
 
 static const char* vehicleLabel() {
+  if (g_settings.vehicle == "genericna") return "Generic NA";
   if (g_settings.vehicle == "meganers3") return "Megane 3 RS";
   if (g_settings.vehicle == "clio4rs") return "Clio 4 RS";
   if (g_settings.vehicle == "megane4rs") return "Megane 4 RS";
   if (g_settings.vehicle == "bmwe8x") return "BMW E8x";
-  return "Generic";
+  if (g_settings.vehicle == "bmwe8xturbo") return "BMW E8x 135i/1M";
+  return "Generic Boost";
 }
 
 static void menuText(int id, char* out, size_t n) {
@@ -665,6 +690,9 @@ static void menuText(int id, char* out, size_t n) {
     case 16:
       snprintf(out, n, "Version %s", FW_VERSION);
       break;
+    case 18:
+      snprintf(out, n, "SD logging: %s", !g_sdOk ? "No card" : (g_settings.sdLog ? "On" : "Off"));
+      break;
     default: {
       int slot = id - 7;
       snprintf(out, n, "Home slot %d: %s", slot + 1, METRICS[metricIndex(g_settings.homeItems[slot])].label);
@@ -676,6 +704,8 @@ static void menuText(int id, char* out, size_t n) {
 static void updateAccentRow() {
   if (g_settings.darkMode) lv_obj_clear_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
   else lv_obj_add_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
+  if (vehicleHasBoost()) lv_obj_clear_flag(menuBtn[3], LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_add_flag(menuBtn[3], LV_OBJ_FLAG_HIDDEN);
 }
 
 static void refreshMenu() {
@@ -732,7 +762,7 @@ static void closeMenu() {
   }
   updateWant();
   if (g_settings.vehicle != vehicleAtOpen) {
-    Serial.println("Vehicle changed, restarting");
+    Log.println("Vehicle changed, restarting");
     delay(300);
     ESP.restart();
   }
@@ -824,17 +854,20 @@ static void menuClick(lv_event_t* e) {
   if (id == 15) {
     settingsSave();
     updaterRequestNow();
-    Serial.println("Update check requested, restarting");
+    Log.println("Update check requested, restarting");
     delay(300);
     ESP.restart();
     return;
   }
   if (id == 1) {
-    if (g_settings.vehicle == "generic") g_settings.vehicle = "meganers3";
+    if (g_settings.vehicle == "generic") g_settings.vehicle = "genericna";
+    else if (g_settings.vehicle == "genericna") g_settings.vehicle = "meganers3";
     else if (g_settings.vehicle == "meganers3") g_settings.vehicle = "clio4rs";
     else if (g_settings.vehicle == "clio4rs") g_settings.vehicle = "megane4rs";
     else if (g_settings.vehicle == "megane4rs") g_settings.vehicle = "bmwe8x";
+    else if (g_settings.vehicle == "bmwe8x") g_settings.vehicle = "bmwe8xturbo";
     else g_settings.vehicle = "generic";
+    updateAccentRow();
   } else if (id == 2) {
     g_settings.speedUnit = g_settings.speedUnit == "mph" ? "kph" : "mph";
   } else if (id == 3) {
@@ -858,11 +891,17 @@ static void menuClick(lv_event_t* e) {
     for (int i = 0; i < START_OPTION_COUNT; i++) {
       if (g_settings.startScreen == START_OPTIONS[i]) cur = i;
     }
-    g_settings.startScreen = START_OPTIONS[(cur + 1) % START_OPTION_COUNT];
+    cur = (cur + 1) % START_OPTION_COUNT;
+    if (!vehicleHasBoost() && strcmp(START_OPTIONS[cur], "boost") == 0) cur = (cur + 1) % START_OPTION_COUNT;
+    g_settings.startScreen = START_OPTIONS[cur];
   } else if (id == 11) {
     g_settings.bootAnimation = !g_settings.bootAnimation;
   } else if (id == 17) {
     g_settings.bootSound = !g_settings.bootSound;
+  } else if (id == 18) {
+    if (!g_sdOk) return;
+    g_settings.sdLog = !g_settings.sdLog;
+    logApply();
   } else if (id == 12) {
     g_settings.darkMode = !g_settings.darkMode;
     applyTheme();
@@ -873,6 +912,7 @@ static void menuClick(lv_event_t* e) {
   } else {
     int slot = id - 7;
     int next = (metricIndex(g_settings.homeItems[slot]) + 1) % METRIC_COUNT;
+    if (!vehicleHasBoost() && next == M_BOOST) next = 1;
     g_settings.homeItems[slot] = METRICS[next].key;
     applyHomeSlots();
     updateWant();
@@ -906,7 +946,7 @@ static void buildBackground(lv_obj_t* scr) {
   lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
   gradBuf = (lv_color_t*)heap_caps_malloc(SCREEN * SCREEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!gradBuf) {
-    Serial.println("UI: couldn't allocate the gradient, using a flat colour");
+    Log.println("UI: couldn't allocate the gradient, using a flat colour");
     return;
   }
   const float gx = 233.0f, gy = 210.0f, maxd = 246.0f;
@@ -1094,12 +1134,17 @@ static void buildChrome(lv_obj_t* scr) {
   ambientLbl = makeLabel(scr, &lv_font_montserrat_20, LAVENDER, 296, 72, 74, LV_TEXT_ALIGN_RIGHT);
   lv_label_set_text(ambientLbl, "");
   lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
-  int startX = SCREEN / 2 - (PAGE_COUNT * 10 + (PAGE_COUNT - 1) * 6) / 2;
+  int dots = 0;
+  for (int i = 0; i < PAGE_COUNT; i++) dots += pageEnabled(i);
+  int startX = SCREEN / 2 - (dots * 10 + (dots - 1) * 6) / 2;
+  int slot = 0;
   for (int i = 0; i < PAGE_COUNT; i++) {
     dotObj[i] = lv_obj_create(scr);
     lv_obj_remove_style_all(dotObj[i]);
     lv_obj_set_size(dotObj[i], 10, 10);
-    lv_obj_set_pos(dotObj[i], startX + i * 16, 418);
+    lv_obj_set_pos(dotObj[i], startX + slot * 16, 418);
+    if (pageEnabled(i)) slot++;
+    else lv_obj_add_flag(dotObj[i], LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_radius(dotObj[i], LV_RADIUS_CIRCLE, 0);
     lv_obj_set_style_bg_color(dotObj[i], lv_color_hex(0xFFFFFF), 0);
     lv_obj_set_style_bg_opa(dotObj[i], LV_OPA_30, 0);
@@ -1154,14 +1199,14 @@ static int startPage() {
       p = pr.getInt("lastPage", 0);
       pr.end();
     }
-    return (p >= 0 && p < PAGE_COUNT) ? p : 0;
+    return (p >= 0 && p < PAGE_COUNT && pageEnabled(p)) ? p : 0;
   }
   if (s == "zerosixty") return RUN_PAGE;
   if (s == "faults") return FAULT_PAGE;
   if (s == "temps" || s == "oil" || s == "coolant") return TEMPS_PAGE;
   if (s == "load" || s == "throttle") return LOAD_PAGE;
   for (int i = 1; i < PAGE_COUNT; i++) {
-    if (pageMetric(i) >= 0 && s == METRICS[pageMetric(i)].key) return i;
+    if (pageMetric(i) >= 0 && s == METRICS[pageMetric(i)].key) return pageEnabled(i) ? i : 0;
   }
   return 0;
 }
@@ -1169,6 +1214,7 @@ static int startPage() {
 void uiBuild(lv_obj_t* scr) {
   initAccentStyles();
   applyAccent();
+  fixHomeSlots();
   buildBackground(scr);
   buildHomePage(scr);
   buildMetricPages(scr);
