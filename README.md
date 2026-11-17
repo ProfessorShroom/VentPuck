@@ -4,6 +4,7 @@
 
 <p align="center">
 <a href="https://github.com/ProfessorShroom/VentPuck/releases"><img alt="Release" src="https://img.shields.io/github/v/release/ProfessorShroom/VentPuck?label=release&style=for-the-badge"></a>
+<a href="https://github.com/ProfessorShroom/VentPuck/actions/workflows/build.yml"><img alt="Build" src="https://img.shields.io/github/actions/workflow/status/ProfessorShroom/VentPuck/build.yml?branch=main&label=build&style=for-the-badge"></a>
 <img alt="ESP32-S3" src="https://img.shields.io/badge/ESP32-S3-E7352C?style=for-the-badge&logo=espressif&logoColor=white">
 <img alt="LVGL" src="https://img.shields.io/badge/UI-LVGL-8A2BE2?style=for-the-badge">
 <img alt="OBD2" src="https://img.shields.io/badge/OBD2-BLE-0078D4?style=for-the-badge">
