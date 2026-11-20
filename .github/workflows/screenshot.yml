@@ -1,0 +1,82 @@
+name: Screenshot
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "src/**"
+      - "include/lv_conf.h"
+      - "tools/screenshots/**"
+      - ".github/workflows/screenshot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: screenshot
+  cancel-in-progress: true
+
+jobs:
+  screenshot:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Check for beta build
+        id: version
+        run: |
+          version=$(sed -n 's/.*FW_VERSION "\([^"]*\)".*/\1/p' src/version.h)
+          echo "Version: $version"
+          if [[ "$version" =~ b[0-9]+$ ]]; then
+            echo "Beta build - skipping screenshot."
+            echo "beta=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "beta=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install tools
+        if: steps.version.outputs.beta != 'true'
+        run: |
+          sudo apt-get -o Acquire::Retries=5 update
+          sudo apt-get -o Acquire::Retries=5 install -y g++ make python3-pil fonts-dejavu-core
+
+      - name: Get LVGL
+        if: steps.version.outputs.beta != 'true'
+        run: git clone --depth 1 --branch v8.4.0 https://github.com/lvgl/lvgl.git tools/screenshots/lvgl
+
+      - name: Render screens
+        if: steps.version.outputs.beta != 'true'
+        working-directory: tools/screenshots
+        run: |
+          make -j"$(nproc)" LVGL_DIR=lvgl
+          mkdir -p out
+          ./ventpuck-sim out
+          python3 compose.py out ../../images/ventpuckScreens.png
+
+      - name: Commit screenshot
+        if: steps.version.outputs.beta != 'true'
+        id: commit
+        run: |
+          git add images/ventpuckScreens.png
+          if git diff --cached --quiet; then
+            echo "Screenshot unchanged."
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Update screens image"
+          git push
+          echo "changed=true" >> "$GITHUB_OUTPUT"
+
+      - name: Notify website
+        if: steps.commit.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
+        run: |
+          gh api repos/ProfessorShroom/professorshroom.github.io/dispatches \
+            -f event_type=readme-updated \
+            -f "client_payload[repo]=${{ github.repository }}"

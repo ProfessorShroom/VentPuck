@@ -31,7 +31,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - Swipe left and right between screens. The screen you were on last is remembered, so it boot back up into that screen.
 - **Home** screen with four readings you choose, by default oil, coolant, boost and RPM.
 - Single reading screens for boost, RPM, speed, battery voltage and intake air temperature, each with oil and coolant temperature always shown at the bottom.
-- An **oil and coolant** screen that shows both temperatures large, and a **load and throttle** screen that shows engine load and throttle position together.
+- An **oil and coolant** screen that shows both temperatures large, and a **load and throttle** screen that shows engine load and throttle position together. Most cars report throttle position as 15% or so with your foot off, so VentPuck learns the closed position and shows that as 0%.
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
 - Outside air temperature shown small in the top corner of every screen, only if the car reports it.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
@@ -142,12 +142,19 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.0.0.0 - Initial Release**
+**Version 1.0.1.0**
 
-- **_1.0.0.0_** Inital Release of VentPuck
+- **_1.0.1.0_** Throttle position now learns your car's closed position and shows it as 0%, instead of around 15% with your foot off.
+- **_1.0.1.0_** Load and throttle readings are now included in the serial and SD card log, along with the raw throttle value.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x - Initial Release</strong></summary>
+
+**Version 1.0.0.0 - Initial Release**
+
+- **_1.0.0.0_** Inital Release of VentPuck
+
+</details>
