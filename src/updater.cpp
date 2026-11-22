@@ -17,6 +17,7 @@
 #include "display.h"
 #include "version.h"
 #include "versionCompare.h"
+#include "obd.h"
 
 extern const uint8_t certBundleStart[] asm("_binary_certs_x509_crt_bundle_bin_start");
 extern const uint8_t certBundleEnd[] asm("_binary_certs_x509_crt_bundle_bin_end");
@@ -37,6 +38,8 @@ static lv_obj_t* cover = nullptr;
 static lv_obj_t* titleLbl = nullptr;
 static lv_obj_t* statusLbl = nullptr;
 static lv_obj_t* bar = nullptr;
+// Set while the automatic check runs in its own task. LVGL isn't thread safe, so nothing may touch the screen then.
+static bool quiet = false;
 
 static void uiOpen() {
   bool dark = g_settings.darkMode;
@@ -75,12 +78,14 @@ static void uiOpen() {
 }
 
 static void uiClose() {
+  if (quiet) return;
   if (cover) lv_obj_del(cover);
   cover = nullptr;
   displayLoop();
 }
 
 static void uiShow(const char* title, const char* status, int pct) {
+  if (quiet) return;
   if (!cover) {
     displayLoop();
     return;
@@ -125,7 +130,7 @@ static bool syncClock() {
   configTime(0, 0, "pool.ntp.org", "time.cloudflare.com");
   uint32_t t0 = millis();
   while (time(nullptr) < 1700000000 && millis() - t0 < 10000) {
-    displayLoop();
+    if (!quiet) displayLoop();
     delay(50);
   }
   return time(nullptr) >= 1700000000;
@@ -343,9 +348,9 @@ static bool takeRequest() {
   return now;
 }
 
-void updaterBoot() {
-  bool forced = takeRequest();
-  if (!forced && !g_settings.update) return;
+// forced: the menu asked for a check, so it runs before anything else with progress on screen.
+// Otherwise it's the automatic check, which runs quietly in the background and installs an update for the next start.
+static void checkAndInstall(bool forced) {
   if (forced) uiOpen();
   const char* error = nullptr;
   if (wifiCount() == 0) {
@@ -402,11 +407,16 @@ void updaterBoot() {
     }
   } else {
     Log.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
-    if (!cover) uiOpen();
+    if (!quiet && !cover) uiOpen();
     char line[64];
     snprintf(line, sizeof line, "Version %s", c.tag);
     uiShow("UPDATING", line, 0);
     if (downloadAndFlash(c, &error)) {
+      if (quiet) {
+        Log.printf("Update: %s installed, it runs the next time VentPuck starts\n", c.tag);
+        radioOff();
+        return;
+      }
       uiShow("UPDATED", "Restarting...", 100);
       pumpFor(1200);
       ESP.restart();
@@ -417,4 +427,27 @@ void updaterBoot() {
   }
   radioOff();
   uiClose();
+}
+
+static bool checkedThisBoot = false;
+
+void updaterBoot() {
+  if (!takeRequest()) return;
+  checkedThisBoot = true;
+  checkAndInstall(true);
+}
+
+static void backgroundTask(void*) {
+  // Let the adapter connect and probe first, so the Wi-Fi doesn't slow that down. Without a car, go ahead after 30 s.
+  uint32_t t0 = millis();
+  while (g_live.state != OBD_LIVE && millis() - t0 < 30000) delay(500);
+  quiet = true;
+  checkAndInstall(false);
+  quiet = false;
+  vTaskDelete(nullptr);
+}
+
+void updaterStartBackground() {
+  if (checkedThisBoot || !g_settings.update || wifiCount() == 0) return;
+  xTaskCreatePinnedToCore(backgroundTask, "update", 12288, nullptr, 1, nullptr, 1);
 }

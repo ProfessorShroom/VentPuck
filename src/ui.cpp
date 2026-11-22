@@ -38,7 +38,7 @@ struct MetricDef {
 static const MetricDef METRICS[METRIC_COUNT] = {
     {"boost", "Boost", &iconBoost},   {"oil", "Oil", &iconOil},       {"coolant", "Coolant", &iconCoolant},
     {"rpm", "RPM", &iconRpm},         {"speed", "Speed", &iconSpeed}, {"voltage", "Voltage", &iconVoltage},
-    {"iat", "IAT", &iconIat},         {"load", "Load", &iconLoad},    {"throttle", "Throttle", &iconThrottle}};
+    {"iat", "Intake Air", &iconIat},  {"load", "Load", &iconLoad},    {"throttle", "Throttle", &iconThrottle}};
 
 static int pageMetric(int p) {
   switch (p) {
@@ -664,7 +664,7 @@ static void menuText(int id, char* out, size_t n) {
       else if (g_settings.startScreen == "faults") snprintf(tmp, sizeof tmp, "Fault codes");
       else if (g_settings.startScreen == "temps" || g_settings.startScreen == "oil" || g_settings.startScreen == "coolant") snprintf(tmp, sizeof tmp, "Oil & coolant");
       else if (g_settings.startScreen == "load" || g_settings.startScreen == "throttle") snprintf(tmp, sizeof tmp, "Load & throttle");
-      else if (g_settings.startScreen == "iat") snprintf(tmp, sizeof tmp, "IAT");
+      else if (g_settings.startScreen == "iat") snprintf(tmp, sizeof tmp, "Intake air");
       else snprintf(tmp, sizeof tmp, "%s", g_settings.startScreen.c_str());
       capitalise(tmp);
       snprintf(out, n, "Start: %s", tmp);

@@ -21,6 +21,7 @@ struct Settings {
   bool sdLog = false;
   String accent = "purple";
   String vehicle = "generic";
+  String adapterName = "OBDLink";  // part of the adapter's Bluetooth name, or empty for any OBD adapter
   String startScreen = "last";
   String homeItems[4] = {"oil", "coolant", "boost", "rpm"};
 };

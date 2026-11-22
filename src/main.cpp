@@ -45,6 +45,7 @@ void setup() {
   updaterBoot();
 
   obdStart();
+  updaterStartBackground();
 }
 
 void loop() {

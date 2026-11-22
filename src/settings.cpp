@@ -78,7 +78,7 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent", "sd_log"};
+                                     "temp_unit", "brightness", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent", "sd_log", "adapter_name"};
 
 static bool wifiKey(const String& k, int* slot, bool* isPassword) {
   String rest;
@@ -126,6 +126,7 @@ static String iniValue(const char* key) {
   if (k == "dark_mode") return g_settings.darkMode ? "true" : "false";
   if (k == "sd_log") return g_settings.sdLog ? "true" : "false";
   if (k == "vehicle") return g_settings.vehicle;
+  if (k == "adapter_name") return g_settings.adapterName;
   if (k == "start_screen") return g_settings.startScreen;
   if (k == "home_items") {
     return g_settings.homeItems[0] + "," + g_settings.homeItems[1] + "," + g_settings.homeItems[2] + "," +
@@ -197,6 +198,8 @@ static void applyKey(String key, String val) {
     val.toLowerCase();
     if (val == "renault") val = "meganers3";
     if (val == "generic" || val == "genericna" || val == "meganers3" || val == "clio4rs" || val == "megane4rs" || val == "bmwe8x" || val == "bmwe8xturbo") g_settings.vehicle = val;
+  } else if (key == "adapter_name") {
+    g_settings.adapterName = val;
   } else if (key == "start_screen") {
     val.toLowerCase();
     if (val == "last" || val == "home" || val == "zerosixty" || val == "faults" || val == "temps" || metricKeyValid(val)) g_settings.startScreen = val;
@@ -234,6 +237,8 @@ static bool writeIni() {
   f.print("# These can also be changed from the on-screen menu: press and hold on any screen.\n\n");
   f.print("# Vehicle: meganers3 (Renault Megane RS Mk3), clio4rs (Renault Clio RS Mk4), megane4rs (Renault Megane RS Mk4) - all three add engine ECU readings such as oil temp, bmwe8x (BMW 1 Series E8x, standard OBD for now, no boost screen), bmwe8xturbo (BMW 135i / 1M, same as bmwe8x with the boost screen), generic (standard OBD only) or genericna (standard OBD, no boost screen)\n");
   f.printf("vehicle=%s\n\n", iniValue("vehicle").c_str());
+  f.print("# Adapter: part of the OBD adapter's Bluetooth name (not case sensitive). Leave it empty to use the first BLE OBD adapter it finds\n");
+  f.printf("adapter_name=%s\n\n", iniValue("adapter_name").c_str());
   f.print("# Updates (Wi-Fi is only used to check for updates). update_channel is release or beta, and beta builds may be unstable\n");
   f.printf("update=%s\n", iniValue("update").c_str());
   f.printf("update_channel=%s\n", iniValue("update_channel").c_str());

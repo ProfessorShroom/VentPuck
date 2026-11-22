@@ -9,14 +9,16 @@
 #include <Preferences.h>
 #include <math.h>
 
-static const char* ADAPTER_NAME = "OBDLink";
-
 static NimBLEClient* client = nullptr;
 static NimBLERemoteCharacteristic* txChar = nullptr;  // FFF2 (write)
 static NimBLERemoteCharacteristic* rxChar = nullptr;  // FFF1 (notify)
 
-static String rxBuf;
+// Filled by the BLE host task in onNotify and read by the OBD task in cmd(), so every access holds rxMux.
+static portMUX_TYPE rxMux = portMUX_INITIALIZER_UNLOCKED;
+static char rxBuf[1024];
+static size_t rxLen = 0;
 static volatile bool gotPrompt = false;
+static bool lastTimedOut = false;
 static bool pollEnabled = true;
 static bool supported[256] = {false};
 static bool worked[256] = {false};
@@ -29,6 +31,39 @@ static float renaultBaroMbar = NAN;
 static bool bmwOil = false;
 static int bmwVariant = 0;
 static int bmwFormula = 0;
+
+// Each reading remembers when it last arrived, so a value that stops updating (a PID that stops answering,
+// or the link dropping) goes back to "--" instead of looking live.
+static const uint32_t STALE_MS = 10000;
+
+struct Tracked {
+  volatile float* value;
+  uint32_t at;
+};
+
+static Tracked tracked[] = {
+    {&g_live.rpm, 0},    {&g_live.speedKph, 0}, {&g_live.coolantC, 0},    {&g_live.oilC, 0},
+    {&g_live.mapKpa, 0}, {&g_live.batteryV, 0}, {&g_live.iatC, 0},        {&g_live.loadPct, 0},
+    {&g_live.throttlePct, 0}, {&g_live.ambientC, 0}};
+
+static void put(volatile float& f, float v) {
+  f = v;
+  for (Tracked& t : tracked) {
+    if (t.value == &f) t.at = millis();
+  }
+}
+
+static void expireStale() {
+  uint32_t now = millis();
+  for (Tracked& t : tracked) {
+    if (!isnan(*t.value) && now - t.at > STALE_MS) *t.value = NAN;
+  }
+}
+
+static void clearLive() {
+  for (Tracked& t : tracked) *t.value = NAN;
+  g_live.baroKpa = NAN;
+}
 
 struct KeyPid {
   uint8_t pid;
@@ -75,14 +110,32 @@ static int decimals(const KeyPid& k) {
 }
 
 static void onNotify(NimBLERemoteCharacteristic*, uint8_t* data, size_t len, bool) {
+  portENTER_CRITICAL(&rxMux);
   for (size_t i = 0; i < len; i++) {
     char c = (char)data[i];
     if (c == '>') {
       gotPrompt = true;
-    } else {
-      rxBuf += c;
+    } else if (rxLen < sizeof rxBuf - 1) {
+      rxBuf[rxLen++] = c;
     }
   }
+  portEXIT_CRITICAL(&rxMux);
+}
+
+static void rxClear() {
+  portENTER_CRITICAL(&rxMux);
+  rxLen = 0;
+  gotPrompt = false;
+  portEXIT_CRITICAL(&rxMux);
+}
+
+static String rxTake() {
+  static char copy[sizeof rxBuf];
+  portENTER_CRITICAL(&rxMux);
+  memcpy(copy, rxBuf, rxLen);
+  copy[rxLen] = 0;
+  portEXIT_CRITICAL(&rxMux);
+  return String(copy);
 }
 
 static bool uuidHas(const NimBLEUUID& u, const char* fragment) {
@@ -91,22 +144,39 @@ static bool uuidHas(const NimBLEUUID& u, const char* fragment) {
   return s.indexOf(fragment) >= 0;
 }
 
+static bool advertisesSerial(const NimBLEAdvertisedDevice* d) {
+  return d->isAdvertisingService(NimBLEUUID((uint16_t)0xFFF0)) || d->isAdvertisingService(NimBLEUUID((uint16_t)0xFFE0));
+}
+
+// Used when adapter_name is empty: a name that looks like an OBD adapter, or the serial service in the advert.
+static bool looksLikeObd(const NimBLEAdvertisedDevice* d, const String& lowerName) {
+  return lowerName.indexOf("obd") >= 0 || lowerName.indexOf("elm") >= 0 || lowerName.indexOf("vlink") >= 0 ||
+         lowerName.indexOf("vgate") >= 0 || advertisesSerial(d);
+}
+
 static bool connectAdapter() {
   NimBLEScan* scan = NimBLEDevice::getScan();
   scan->setActiveScan(true);
-  Log.println("Scanning for OBDLink adapter (8 s)...");
+  String want = g_settings.adapterName;
+  want.trim();
+  want.toLowerCase();
+  if (want.length()) Log.printf("Scanning for an adapter named '%s' (8 s)...\n", g_settings.adapterName.c_str());
+  else Log.println("Scanning for any BLE OBD adapter (8 s)...");
   NimBLEScanResults results = scan->getResults(8000, false);
 
   const NimBLEAdvertisedDevice* target = nullptr;
   for (uint32_t i = 0; i < results.getCount(); i++) {
     const NimBLEAdvertisedDevice* d = results.getDevice(i);
     String name = d->getName().c_str();
-    Log.printf("  found: %s [%s] type %u RSSI %d\n", name.length() ? name.c_str() : "(no name)",
-                  d->getAddress().toString().c_str(), d->getAddress().getType(), d->getRSSI());
-    if (!target && name.indexOf(ADAPTER_NAME) >= 0) target = d;
+    Log.printf("  found: %s [%s] type %u RSSI %d%s\n", name.length() ? name.c_str() : "(no name)",
+                  d->getAddress().toString().c_str(), d->getAddress().getType(), d->getRSSI(),
+                  advertisesSerial(d) ? " serial" : "");
+    if (target) continue;
+    name.toLowerCase();
+    if (want.length() ? name.indexOf(want) >= 0 : looksLikeObd(d, name)) target = d;
   }
   if (!target) {
-    Log.println("No OBDLink adapter found. Is it plugged in, with the ignition on?");
+    Log.println("No adapter found. Is it plugged in, with the ignition on?");
     return false;
   }
 
@@ -148,12 +218,16 @@ static bool connectAdapter() {
       if (uuidHas(svc->getUUID(), "fff0")) {
         if (uuidHas(chr->getUUID(), "fff1")) rxChar = chr;
         if (uuidHas(chr->getUUID(), "fff2")) txChar = chr;
+      } else if (uuidHas(svc->getUUID(), "ffe0") && uuidHas(chr->getUUID(), "ffe1") && !rxChar && !txChar) {
+        // Many ELM327 clones use one characteristic for both directions.
+        rxChar = chr;
+        txChar = chr;
       }
     }
   }
 
   if (!rxChar || !txChar) {
-    Log.println("Couldn't find the FFF0 serial service (FFF1 notify / FFF2 write).");
+    Log.println("Couldn't find a serial service (FFF0 with FFF1/FFF2, or FFE0 with FFE1).");
     return false;
   }
   if (!rxChar->subscribe(true, onNotify)) {
@@ -171,21 +245,28 @@ static bool bleWrite(const String& s) {
     size_t end = i + chunk;
     if (end > s.length()) end = s.length();
     String part = s.substring(i, end);
-    if (!txChar->writeValue((const uint8_t*)part.c_str(), part.length(), true)) return false;
+    if (!txChar->writeValue((const uint8_t*)part.c_str(), part.length(), txChar->canWrite())) return false;
   }
   return true;
 }
 
 static String cmd(const String& c, uint32_t timeoutMs = 5000) {
-  rxBuf = "";
-  gotPrompt = false;
-  if (!bleWrite(c + "\r")) return "WRITE FAILED";
+  if (lastTimedOut) {
+    // The last command never got its prompt, so its reply may still be on the way. Give it a moment to
+    // arrive and throw it away, so it isn't read as the answer to this command.
+    uint32_t t0 = millis();
+    while (!gotPrompt && millis() - t0 < 300) delay(5);
+  }
+  rxClear();
+  if (!client || !txChar || !bleWrite(c + "\r")) return "WRITE FAILED";
   uint32_t start = millis();
   while (!gotPrompt && millis() - start < timeoutMs) delay(5);
-  String r = rxBuf;
+  bool ok = gotPrompt;
+  lastTimedOut = !ok;
+  String r = rxTake();
   r.trim();
   r.replace("\r", "|");
-  return gotPrompt ? r : r + " [TIMEOUT]";
+  return ok ? r : r + " [TIMEOUT]";
 }
 
 static int readPid(uint8_t pid, uint8_t* out, int maxLen) {
@@ -337,7 +418,7 @@ static void probeRenault() {
   float v;
   float boostMbar = NAN;
   renaultOil = testDid(0x2007, "Oil temp", "C", v);
-  if (renaultOil) g_live.oilC = v;
+  if (renaultOil) put(g_live.oilC, v);
   renaultBaro = testDid(0x2009, "Atmospheric pressure", "mbar", v);
   if (renaultBaro) renaultBaroMbar = v;
   renaultBoost = testDid(0x2401, "Boost pressure", "mbar", boostMbar);
@@ -346,7 +427,7 @@ static void probeRenault() {
     Log.printf("  Boost pressure looks %s\n", boostAbsolute ? "absolute (about atmospheric at idle)" : "relative (about zero at idle)");
   }
   renaultVolt = testDid(0x2005, "Battery voltage", "V", v);
-  if (renaultVolt) g_live.batteryV = v;
+  if (renaultVolt) put(g_live.batteryV, v);
   float extra;
   testDid(0x240B, "Intake manifold pressure", "mbar", extra);
   testDid(0x2402, "Boost setpoint", "hPa", extra);
@@ -468,7 +549,7 @@ static void probeBmw() {
     else bmwFormula = pa ? 0 : 1;
     bmwVariant = v;
     bmwOil = true;
-    g_live.oilC = bmwFormula == 0 ? a : b;
+    put(g_live.oilC, bmwFormula == 0 ? a : b);
     Log.printf("  using variant %d and reading %c\n", v, bmwFormula == 0 ? 'A' : 'B');
     break;
   }
@@ -555,11 +636,11 @@ static void pollOnce() {
     float v;
     if (!readValue(k.pid, v)) continue;
     switch (k.pid) {
-      case 0x0C: g_live.rpm = v; break;
-      case 0x0D: g_live.speedKph = v; break;
-      case 0x05: g_live.coolantC = v; break;
-      case 0x5C: if (!renaultOil) g_live.oilC = v; break;
-      case 0x0B: if (!renaultBoost) g_live.mapKpa = v; break;
+      case 0x0C: put(g_live.rpm, v); break;
+      case 0x0D: put(g_live.speedKph, v); break;
+      case 0x05: put(g_live.coolantC, v); break;
+      case 0x5C: if (!renaultOil) put(g_live.oilC, v); break;
+      case 0x0B: if (!renaultBoost) put(g_live.mapKpa, v); break;
       case 0x33: if (!renaultBoost) g_live.baroKpa = v; break;
       default: break;
     }
@@ -578,16 +659,16 @@ static void pollOnce() {
     float absMbar = boostAbsolute ? rv : rv + baroMbar;
     map = absMbar / 10.0f;
     baro = baroMbar / 10.0f;
-    g_live.mapKpa = map;
+    put(g_live.mapKpa, map);
     g_live.baroKpa = baro;
   }
   if (slow) {
     if (renaultBaro && readDidValue(0x2009, rv)) renaultBaroMbar = rv;
-    if (renaultOil && readDidValue(0x2007, rv)) g_live.oilC = rv;
-    if (renaultVolt && readDidValue(0x2005, rv)) g_live.batteryV = rv;
+    if (renaultOil && readDidValue(0x2007, rv)) put(g_live.oilC, rv);
+    if (renaultVolt && readDidValue(0x2005, rv)) put(g_live.batteryV, rv);
     if (!renaultVolt) {
       float av = cmd("ATRV", 2000).toFloat();
-      if (av > 0.0f) g_live.batteryV = av;
+      if (av > 0.0f) put(g_live.batteryV, av);
     }
   }
   if (renaultOil && !isnan(g_live.oilC)) {
@@ -631,7 +712,19 @@ static float throttleScaled(float raw) {
     thrSaved = thrZero;
   }
   thrRaw = raw;
-  if (raw < 30.0f && (isnan(thrZero) || raw < thrZero)) thrZero = raw;
+  // Only move the zero point down after several low readings in a row, and then by the highest of them,
+  // so one glitchy reading can't be saved as the closed-throttle position.
+  static int lowRun = 0;
+  static float lowMax = 0.0f;
+  if (raw < 30.0f && (isnan(thrZero) || raw < thrZero)) {
+    lowMax = lowRun == 0 ? raw : fmaxf(lowMax, raw);
+    if (++lowRun >= 5) {
+      thrZero = lowMax;
+      lowRun = 0;
+    }
+  } else {
+    lowRun = 0;
+  }
   if (!isnan(thrZero) && (isnan(thrSaved) || thrSaved - thrZero >= 0.5f)) {
     Preferences p;
     if (p.begin("ventpuck", false)) {
@@ -647,6 +740,9 @@ static float throttleScaled(float raw) {
   return out;
 }
 
+static const uint32_t TEMP_MS = 2000;
+static const uint32_t VOLT_MS = 1000;
+
 static void pollNeeded() {
   static uint32_t cycle = 0;
   static uint32_t lastLog = 0;
@@ -657,33 +753,44 @@ static void pollNeeded() {
   bool any = false;
   float v;
   auto need = [&](int bit) { return (mainMask & (1u << bit)) || (slow && (secMask & (1u << bit))); };
+  // Temperatures and voltage change slowly, so they're read on a timer instead of every cycle, leaving
+  // more of the link for RPM, boost and speed. A missing value is retried sooner so a new screen fills quickly.
+  static uint32_t lastSlowRead[10] = {0};
+  uint32_t now = millis();
+  auto needSlow = [&](int bit, float current, uint32_t everyMs) {
+    if (!((mainMask | secMask) & (1u << bit))) return false;
+    uint32_t wait = isnan(current) ? 500 : everyMs;
+    if (lastSlowRead[bit] && now - lastSlowRead[bit] < wait) return false;
+    lastSlowRead[bit] = now;
+    return true;
+  };
 
   if (need(M_RPM) && readValue(0x0C, v)) {
-    g_live.rpm = v;
+    put(g_live.rpm, v);
     any = true;
   }
   if (need(M_SPEED) && readValue(0x0D, v)) {
-    g_live.speedKph = v;
+    put(g_live.speedKph, v);
     g_live.speedStamp = millis();
     any = true;
   }
-  if (need(M_COOLANT) && readValue(0x05, v)) {
-    g_live.coolantC = v;
+  if (needSlow(M_COOLANT, g_live.coolantC, TEMP_MS) && readValue(0x05, v)) {
+    put(g_live.coolantC, v);
     any = true;
   }
-  if (need(M_OIL)) {
+  if (needSlow(M_OIL, g_live.oilC, TEMP_MS)) {
     if (renaultOil) {
       if (readDidValue(0x2007, v)) {
-        g_live.oilC = v;
+        put(g_live.oilC, v);
         any = true;
       }
     } else if (bmwOil) {
       if (bmwReadOil(v)) {
-        g_live.oilC = v;
+        put(g_live.oilC, v);
         any = true;
       }
     } else if (worked[0x5C] && readValue(0x5C, v)) {
-      g_live.oilC = v;
+      put(g_live.oilC, v);
       any = true;
     }
   }
@@ -693,46 +800,46 @@ static void pollNeeded() {
       if (readDidValue(0x2401, v)) {
         float baroMbar = isnan(renaultBaroMbar) ? 1013.0f : renaultBaroMbar;
         float absMbar = boostAbsolute ? v : v + baroMbar;
-        g_live.mapKpa = absMbar / 10.0f;
+        put(g_live.mapKpa, absMbar / 10.0f);
         g_live.baroKpa = baroMbar / 10.0f;
         any = true;
       }
     } else {
       if (slow && worked[0x33] && readValue(0x33, v)) g_live.baroKpa = v;
       if (readValue(0x0B, v)) {
-        g_live.mapKpa = v;
+        put(g_live.mapKpa, v);
         any = true;
       }
     }
   }
-  if (need(M_VOLTAGE)) {
+  if (needSlow(M_VOLTAGE, g_live.batteryV, VOLT_MS)) {
     if (renaultVolt) {
       if (readDidValue(0x2005, v)) {
-        g_live.batteryV = v;
+        put(g_live.batteryV, v);
         any = true;
       }
     } else {
       float av = cmd("ATRV", 2000).toFloat();
       if (av > 0.0f) {
-        g_live.batteryV = av;
+        put(g_live.batteryV, av);
         any = true;
       }
     }
   }
-  if (worked[0x0F] && need(M_IAT) && readValue(0x0F, v)) {
-    g_live.iatC = v;
+  if (worked[0x0F] && needSlow(M_IAT, g_live.iatC, TEMP_MS) && readValue(0x0F, v)) {
+    put(g_live.iatC, v);
     any = true;
   }
   if (worked[0x04] && need(M_LOAD) && readValue(0x04, v)) {
-    g_live.loadPct = v;
+    put(g_live.loadPct, v);
     any = true;
   }
   if (worked[0x11] && need(M_THROTTLE) && readValue(0x11, v)) {
-    g_live.throttlePct = throttleScaled(v);
+    put(g_live.throttlePct, throttleScaled(v));
     any = true;
   }
-  if (worked[0x46] && need(WANT_AMBIENT) && readValue(0x46, v)) {
-    g_live.ambientC = v;
+  if (worked[0x46] && needSlow(WANT_AMBIENT, g_live.ambientC, TEMP_MS) && readValue(0x46, v)) {
+    put(g_live.ambientC, v);
     any = true;
   }
   if (!any) delay(30);
@@ -821,7 +928,7 @@ WantData g_want;
 DtcStatus g_dtc;
 
 static void obdTask(void*) {
-  Log.println("\nVentPuck OBDLink CX test");
+  Log.println("\nVentPuck OBD starting");
   NimBLEDevice::init("VentPuck");
   NimBLEDevice::setMTU(247);
   NimBLEDevice::setSecurityAuth(true, false, true);
@@ -830,30 +937,34 @@ static void obdTask(void*) {
   NimBLEDevice::setSecurityRespKey(keyDistEnc);
   Log.printf("Stored bonds: %d\n", NimBLEDevice::getNumBonds());
 
-  g_live.state = OBD_SEARCHING;
-  while (!connectAdapter()) {
-    Log.println("Retrying in 3 s...\n");
-    delay(3000);
-  }
-  g_live.state = OBD_CONNECTED;
-  initAdapter();
-  probe();
-  g_live.state = OBD_LIVE;
-
   for (;;) {
-    if (!client || !client->isConnected()) {
-      Log.println("Disconnected, restarting...");
-      delay(1000);
-      ESP.restart();
+    g_live.state = OBD_SEARCHING;
+    while (!connectAdapter()) {
+      Log.println("Retrying in 3 s...\n");
+      delay(3000);
     }
-    handleSerial();
-    handleDtcCommand();
-    if (pollEnabled) {
-      if (pollAllMode) pollOnce();
-      else pollNeeded();
-    } else {
-      delay(50);
+    g_live.state = OBD_CONNECTED;
+    lastTimedOut = false;
+    initAdapter();
+    probe();
+    g_live.state = OBD_LIVE;
+
+    while (client && client->isConnected()) {
+      handleSerial();
+      handleDtcCommand();
+      if (pollEnabled) {
+        if (pollAllMode) pollOnce();
+        else pollNeeded();
+      } else {
+        delay(50);
+      }
+      expireStale();
     }
+    // Reconnect in place rather than restarting, so a stall-start or a flaky adapter doesn't replay the
+    // boot animation and update check.
+    Log.println("Disconnected, reconnecting...");
+    clearLive();
+    delay(1000);
   }
 }
 
