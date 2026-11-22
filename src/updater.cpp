@@ -18,6 +18,7 @@
 #include "version.h"
 #include "versionCompare.h"
 #include "obd.h"
+#include "ui.h"
 
 extern const uint8_t certBundleStart[] asm("_binary_certs_x509_crt_bundle_bin_start");
 extern const uint8_t certBundleEnd[] asm("_binary_certs_x509_crt_bundle_bin_end");
@@ -42,12 +43,12 @@ static lv_obj_t* bar = nullptr;
 static bool quiet = false;
 
 static void uiOpen() {
-  bool dark = g_settings.darkMode;
+  ThemeColours theme = uiTheme();
   cover = lv_obj_create(lv_layer_top());
   lv_obj_remove_style_all(cover);
   lv_obj_set_size(cover, 466, 466);
   lv_obj_set_pos(cover, 0, 0);
-  lv_obj_set_style_bg_color(cover, dark ? lv_color_hex(0x000000) : lv_color_hex(0x0D0620), 0);
+  lv_obj_set_style_bg_color(cover, lv_color_hex(theme.menuBg), 0);
   lv_obj_set_style_bg_opa(cover, LV_OPA_COVER, 0);
   lv_obj_clear_flag(cover, LV_OBJ_FLAG_SCROLLABLE);
 
@@ -55,7 +56,7 @@ static void uiOpen() {
   lv_obj_set_width(titleLbl, 340);
   lv_obj_set_pos(titleLbl, 63, 120);
   lv_obj_set_style_text_font(titleLbl, &lv_font_montserrat_28, 0);
-  lv_obj_set_style_text_color(titleLbl, lv_color_hex(0xEAD9FF), 0);
+  lv_obj_set_style_text_color(titleLbl, lv_color_hex(theme.icon), 0);
   lv_obj_set_style_text_align(titleLbl, LV_TEXT_ALIGN_CENTER, 0);
 
   statusLbl = lv_label_create(cover);
@@ -70,8 +71,8 @@ static void uiOpen() {
   lv_obj_set_size(bar, 260, 14);
   lv_obj_set_pos(bar, 103, 300);
   lv_bar_set_range(bar, 0, 100);
-  lv_obj_set_style_bg_color(bar, lv_color_hex(0x2A0A78), LV_PART_MAIN);
-  lv_obj_set_style_bg_color(bar, lv_color_hex(0x8A5CFF), LV_PART_INDICATOR);
+  lv_obj_set_style_bg_color(bar, lv_color_hex(theme.btnDark), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(bar, lv_color_hex(theme.btnPressed), LV_PART_INDICATOR);
   lv_obj_set_style_radius(bar, 7, LV_PART_MAIN);
   lv_obj_set_style_radius(bar, 7, LV_PART_INDICATOR);
   lv_obj_add_flag(bar, LV_OBJ_FLAG_HIDDEN);

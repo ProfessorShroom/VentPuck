@@ -151,23 +151,33 @@ static void initAccentStyles() {
   lv_style_init(&stBtnPressed);
 }
 
-static void applyAccent() {
+ThemeColours uiTheme() {
+  ThemeColours t = {g_settings.colour1, g_settings.colour2, 0x0D0620, 0xD9B8FF, 0xEAD9FF, 0x5A1FE0, 0x2A0A78, 0x8A5CFF};
   int idx = accentIndex();
-  uint32_t text = 0xD9B8FF, icon = 0xEAD9FF, main = 0x5A1FE0, dark = 0x2A0A78, pressed = 0x8A5CFF;
-  if (g_settings.darkMode && idx != 0) {
+  bool dark = g_settings.darkMode;
+  if (idx != 0) {
     uint32_t base = ACCENTS[idx].base;
-    text = mixHex(base, 0xFFFFFF, 35);
-    icon = mixHex(base, 0xFFFFFF, 65);
-    main = mixHex(base, 0x000000, 55);
-    dark = mixHex(base, 0x000000, 75);
-    pressed = base;
+    t.bgOuter = mixHex(base, 0x000000, 81);
+    t.bgCentre = mixHex(base, 0x000000, 58);
+    t.menuBg = mixHex(base, 0x000000, 92);
+    t.text = mixHex(base, 0xFFFFFF, dark ? 35 : 55);
+    t.icon = mixHex(base, 0xFFFFFF, dark ? 65 : 75);
+    t.btnMain = mixHex(base, 0x000000, dark ? 55 : 35);
+    t.btnDark = mixHex(base, 0x000000, dark ? 75 : 70);
+    t.btnPressed = base;
   }
-  lv_style_set_text_color(&stText, lv_color_hex(text));
-  lv_style_set_img_recolor(&stIcon, lv_color_hex(icon));
-  lv_style_set_bg_color(&stFill, lv_color_hex(text));
-  lv_style_set_bg_color(&stBtnMain, lv_color_hex(main));
-  lv_style_set_bg_color(&stBtnDark, lv_color_hex(dark));
-  lv_style_set_bg_color(&stBtnPressed, lv_color_hex(pressed));
+  if (dark) t.bgOuter = t.bgCentre = t.menuBg = 0x000000;
+  return t;
+}
+
+static void applyAccent() {
+  ThemeColours t = uiTheme();
+  lv_style_set_text_color(&stText, lv_color_hex(t.text));
+  lv_style_set_img_recolor(&stIcon, lv_color_hex(t.icon));
+  lv_style_set_bg_color(&stFill, lv_color_hex(t.text));
+  lv_style_set_bg_color(&stBtnMain, lv_color_hex(t.btnMain));
+  lv_style_set_bg_color(&stBtnDark, lv_color_hex(t.btnDark));
+  lv_style_set_bg_color(&stBtnPressed, lv_color_hex(t.btnPressed));
   lv_obj_report_style_change(nullptr);
 }
 
@@ -701,16 +711,14 @@ static void menuText(int id, char* out, size_t n) {
   }
 }
 
-static void updateAccentRow() {
-  if (g_settings.darkMode) lv_obj_clear_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
-  else lv_obj_add_flag(menuBtn[13], LV_OBJ_FLAG_HIDDEN);
+static void updateMenuRows() {
   if (vehicleHasBoost()) lv_obj_clear_flag(menuBtn[3], LV_OBJ_FLAG_HIDDEN);
   else lv_obj_add_flag(menuBtn[3], LV_OBJ_FLAG_HIDDEN);
 }
 
 static void refreshMenu() {
   char buf[48];
-  updateAccentRow();
+  updateMenuRows();
   for (int i = 0; i < MENU_ROWS; i++) {
     menuText(i, buf, sizeof buf);
     lv_label_set_text(menuLabel[i], buf);
@@ -768,14 +776,38 @@ static void closeMenu() {
   }
 }
 
+static void fillGradient(uint32_t outerHex, uint32_t centreHex) {
+  static uint32_t filledOuter = 0xFFFFFFFF, filledCentre = 0xFFFFFFFF;
+  if (!gradBuf || (outerHex == filledOuter && centreHex == filledCentre)) return;
+  lv_color_t outer = lv_color_hex(outerHex);
+  lv_color_t centre = lv_color_hex(centreHex);
+  const float gx = 233.0f, gy = 210.0f, maxd = 246.0f;
+  for (int y = 0; y < SCREEN; y++) {
+    for (int x = 0; x < SCREEN; x++) {
+      float dx = x - gx, dy = y - gy;
+      float t = sqrtf(dx * dx + dy * dy) / maxd;
+      if (t > 1.0f) t = 1.0f;
+      gradBuf[y * SCREEN + x] = lv_color_mix(outer, centre, (uint8_t)(t * 255.0f));
+    }
+  }
+  filledOuter = outerHex;
+  filledCentre = centreHex;
+  if (gradCanvas) lv_obj_invalidate(gradCanvas);
+}
+
 static void applyTheme() {
   bool dark = g_settings.darkMode;
-  lv_obj_set_style_bg_color(lv_scr_act(), dark ? lv_color_hex(0x000000) : lv_color_hex(g_settings.colour1), 0);
+  ThemeColours t = uiTheme();
+  lv_obj_set_style_bg_color(lv_scr_act(), lv_color_hex(t.bgOuter), 0);
   if (gradCanvas) {
-    if (dark) lv_obj_add_flag(gradCanvas, LV_OBJ_FLAG_HIDDEN);
-    else lv_obj_clear_flag(gradCanvas, LV_OBJ_FLAG_HIDDEN);
+    if (dark) {
+      lv_obj_add_flag(gradCanvas, LV_OBJ_FLAG_HIDDEN);
+    } else {
+      fillGradient(t.bgOuter, t.bgCentre);
+      lv_obj_clear_flag(gradCanvas, LV_OBJ_FLAG_HIDDEN);
+    }
   }
-  if (menuObj) lv_obj_set_style_bg_color(menuObj, dark ? lv_color_hex(0x000000) : lv_color_hex(0x0D0620), 0);
+  if (menuObj) lv_obj_set_style_bg_color(menuObj, lv_color_hex(t.menuBg), 0);
   applyAccent();
 }
 
@@ -867,7 +899,7 @@ static void menuClick(lv_event_t* e) {
     else if (g_settings.vehicle == "megane4rs") g_settings.vehicle = "bmwe8x";
     else if (g_settings.vehicle == "bmwe8x") g_settings.vehicle = "bmwe8xturbo";
     else g_settings.vehicle = "generic";
-    updateAccentRow();
+    updateMenuRows();
   } else if (id == 2) {
     g_settings.speedUnit = g_settings.speedUnit == "mph" ? "kph" : "mph";
   } else if (id == 3) {
@@ -905,10 +937,9 @@ static void menuClick(lv_event_t* e) {
   } else if (id == 12) {
     g_settings.darkMode = !g_settings.darkMode;
     applyTheme();
-    updateAccentRow();
   } else if (id == 13) {
     g_settings.accent = ACCENTS[(accentIndex() + 1) % ACCENT_COUNT].key;
-    applyAccent();
+    applyTheme();
   } else {
     int slot = id - 7;
     int next = (metricIndex(g_settings.homeItems[slot]) + 1) % METRIC_COUNT;
@@ -940,23 +971,11 @@ static void rootEvent(lv_event_t* e) {
 }
 
 static void buildBackground(lv_obj_t* scr) {
-  lv_color_t outer = lv_color_hex(g_settings.colour1);
-  lv_color_t centre = lv_color_hex(g_settings.colour2);
-  lv_obj_set_style_bg_color(scr, outer, 0);
   lv_obj_set_style_bg_opa(scr, LV_OPA_COVER, 0);
   gradBuf = (lv_color_t*)heap_caps_malloc(SCREEN * SCREEN * sizeof(lv_color_t), MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
   if (!gradBuf) {
     Log.println("UI: couldn't allocate the gradient, using a flat colour");
     return;
-  }
-  const float gx = 233.0f, gy = 210.0f, maxd = 246.0f;
-  for (int y = 0; y < SCREEN; y++) {
-    for (int x = 0; x < SCREEN; x++) {
-      float dx = x - gx, dy = y - gy;
-      float t = sqrtf(dx * dx + dy * dy) / maxd;
-      if (t > 1.0f) t = 1.0f;
-      gradBuf[y * SCREEN + x] = lv_color_mix(outer, centre, (uint8_t)(t * 255.0f));
-    }
   }
   lv_obj_t* cv = lv_canvas_create(scr);
   lv_canvas_set_buffer(cv, gradBuf, SCREEN, SCREEN, LV_IMG_CF_TRUE_COLOR);
@@ -1128,12 +1147,32 @@ static void buildFaultPage(lv_obj_t* scr) {
   lv_obj_center(clearLbl);
 }
 
+static bool isBetaBuild() {
+  const char* b = strrchr(FW_VERSION, 'b');
+  return b && b[1] >= '0' && b[1] <= '9';
+}
+
 static void buildChrome(lv_obj_t* scr) {
   statusLbl = makeLabel(scr, &lv_font_montserrat_20, lv_color_hex(0xFFFFFF), 0, 60, SCREEN, LV_TEXT_ALIGN_CENTER);
   lv_label_set_text(statusLbl, "");
   ambientLbl = makeLabel(scr, &lv_font_montserrat_20, LAVENDER, 296, 72, 74, LV_TEXT_ALIGN_RIGHT);
   lv_label_set_text(ambientLbl, "");
   lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
+  if (isBetaBuild()) {
+    lv_obj_t* badge = lv_obj_create(scr);
+    lv_obj_remove_style_all(badge);
+    lv_obj_set_size(badge, 26, 26);
+    lv_obj_set_pos(badge, 98, 66);
+    lv_obj_set_style_radius(badge, LV_RADIUS_CIRCLE, 0);
+    lv_obj_add_style(badge, &stBtnMain, 0);
+    lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
+    lv_obj_clear_flag(badge, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_t* glyph = lv_img_create(badge);
+    lv_img_set_src(glyph, &iconBeta);
+    lv_obj_set_style_img_recolor(glyph, lv_color_hex(0xFFFFFF), 0);
+    lv_obj_set_style_img_recolor_opa(glyph, LV_OPA_COVER, 0);
+    lv_obj_align(glyph, LV_ALIGN_CENTER, 0, 1);
+  }
   int dots = 0;
   for (int i = 0; i < PAGE_COUNT; i++) dots += pageEnabled(i);
   int startX = SCREEN / 2 - (dots * 10 + (dots - 1) * 6) / 2;

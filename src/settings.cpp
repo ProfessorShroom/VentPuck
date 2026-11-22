@@ -253,7 +253,7 @@ static bool writeIni() {
     f.printf("%s=%s\n", key, iniValue(key).c_str());
   }
   f.print("\n");
-  f.print("# Dial gradient as hex #RRGGBB: colour1 = outer edge, colour2 = middle\n");
+  f.print("# Dial gradient as hex #RRGGBB, used with the purple accent: colour1 = outer edge, colour2 = middle\n");
   f.printf("colour1=%s\n", iniValue("colour1").c_str());
   f.printf("colour2=%s\n\n", iniValue("colour2").c_str());
   f.print("# Units: speed mph or kph, boost bar or psi or kpa, temp C or F\n");
@@ -270,7 +270,7 @@ static bool writeIni() {
   f.printf("boot_sound=%s\n", iniValue("boot_sound").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");
   f.printf("dark_mode=%s\n", iniValue("dark_mode").c_str());
-  f.print("# Accent colour used in dark mode: purple, blue, cyan, green, yellow, orange, red, pink or white\n");
+  f.print("# Accent colour: purple, blue, cyan, green, yellow, orange, red, pink or white. Purple uses colour1 and colour2 for the gradient\n");
   f.printf("accent=%s\n\n", iniValue("accent").c_str());
   f.print("# Logging: true writes the serial output to ventpuck.log on the card\n");
   f.printf("sd_log=%s\n", iniValue("sd_log").c_str());

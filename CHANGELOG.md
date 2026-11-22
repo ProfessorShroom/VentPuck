@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.1.0.0b2
+
+### Added
+- Beta builds show a small β badge in the top left corner of every screen, as a reminder that you're running a test build.
+
+### Changed
+- The accent colour now works in colour mode too, not just dark mode. It changes the background gradient, text, icons, buttons, menu, boot animation and update screen. The purple accent keeps the classic look and still uses `colour1` and `colour2` from `settings.ini`.
+- The **Accent** setting is now in the menu in both modes.
+
 ## 1.1.0.0b1
 
 ### Added

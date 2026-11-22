@@ -51,7 +51,7 @@ static void ringDraw(lv_event_t* e) {
   lv_draw_rect_dsc_init(&d);
   d.bg_opa = LV_OPA_TRANSP;
   d.border_opa = LV_OPA_COVER;
-  d.border_color = g_settings.darkMode ? lv_color_hex(0x000000) : lv_color_hex(g_settings.colour1);
+  d.border_color = lv_color_hex(uiTheme().bgOuter);
   d.border_width = RING_R - irisR;
   d.radius = LV_RADIUS_CIRCLE;
   lv_area_t a = {(lv_coord_t)(CX - RING_R), (lv_coord_t)(CY - RING_R), (lv_coord_t)(CX + RING_R - 1),

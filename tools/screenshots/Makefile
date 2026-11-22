@@ -7,7 +7,7 @@ CFLAGS := -O2 -w -DLV_CONF_INCLUDE_SIMPLE -Istubs -I$(ROOT)/include -I$(ROOT)/sr
 CXXFLAGS := $(CFLAGS) -std=gnu++17
 
 LVGL_SRC = $(shell find $(LVGL_DIR)/src -name '*.c')
-APP_SRC := $(ROOT)/src/icons.c $(ROOT)/src/font_digits.c
+APP_SRC := $(ROOT)/src/icons.c $(ROOT)/src/icon_beta.c $(ROOT)/src/font_digits.c
 OBJS := $(patsubst %.c,$(BUILD)/%.o,$(notdir $(LVGL_SRC) $(APP_SRC))) $(BUILD)/sim.o
 
 vpath %.c $(sort $(dir $(LVGL_SRC) $(APP_SRC)))

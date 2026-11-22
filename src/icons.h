@@ -14,6 +14,7 @@ extern const lv_img_dsc_t iconEngine;
 extern const lv_img_dsc_t iconIat;
 extern const lv_img_dsc_t iconLoad;
 extern const lv_img_dsc_t iconThrottle;
+extern const lv_img_dsc_t iconBeta;
 #ifdef __cplusplus
 }
 #endif
