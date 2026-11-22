@@ -35,15 +35,16 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
 - Outside air temperature shown small in the top corner of every screen, only if the car reports it.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
-- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, start screen, home screen readings, boot animation, boot sound, dark mode, update channel and version.
-- Dark mode with a pure black background, which suits the AMOLED, and a choice of accent colour for the text, icons and buttons.
+- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel and version.
+- Dark mode with a pure black background, which suits the AMOLED.
 - Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
+- A choice of accent colour for the text, icons and buttons in either mode. In colour mode it changes the background gradient too, and the purple accent uses your own gradient colours from the .ini file.
 - Boot animation with your own logo. Put a `logo.png` on the SD card to replace the default. This must be no larger than 1024x1024 and 1MB in size. I would suggest around 700x700 maximum for speed.
 - OTA updates over Wi-Fi from GitHub, with a Release or Beta channel.
 
 ### Example screens
 
-In swipe order: Home, Boost, Oil and coolant, IAT, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
+In swipe order: Home, Boost, Oil and coolant, Intake air, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
 
 <p align="center">
   <img src="images/ventpuckScreens.png" alt="VentPuck screens"/>
@@ -76,6 +77,7 @@ Everything is optional. If there's an SD card, VentPuck creates a `settings.ini`
 
 ```ini
 vehicle=meganers3
+adapter_name=OBDLink
 update=true
 update_channel=release
 ssid=YourWifi
@@ -106,10 +108,11 @@ sd_log=false
 | Key | Values |
 | --- | --- |
 | `vehicle` | `generic` (Generic Boost), `genericna` (Generic NA), `meganers3`, `clio4rs`, `megane4rs`, `bmwe8x`, `bmwe8xturbo` (135i / 1M) |
-| `update` | `true` or `false`, whether to check for updates when it starts |
+| `adapter_name` | Part of the adapter's Bluetooth name, not case sensitive (default `OBDLink`). Leave it empty to use the first BLE OBD adapter it finds |
+| `update` | `true` or `false`, whether to check for updates in the background after it starts |
 | `update_channel` | `release` or `beta` |
 | `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
-| `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle |
+| `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle, used with the `purple` accent |
 | `speed_unit` | `mph` or `kph` |
 | `boost_unit` | `bar`, `psi` or `kpa` |
 | `temp_unit` | `C` or `F` |
@@ -119,14 +122,14 @@ sd_log=false
 | `boot_animation` | `true` or `false` |
 | `boot_sound` | `true` or `false`, a short chime through the speaker at start up |
 | `dark_mode` | `true` or `false` |
-| `accent` | Dark mode accent colour: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink` or `white` |
+| `accent` | Accent colour, in both dark and colour mode: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink` or `white` |
 | `sd_log` | `true` or `false`, writes the serial output to `ventpuck.log` on the card (also in the menu as **SD logging**) |
 
 The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check for updates.
 
 ### Updates
 
-Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Set `update=true` and your Wi-Fi details in `settings.ini`. The check happens quietly at start up and the screen only changes if it finds a newer version. You can also run a check from the menu with **Check for updates now**.
+Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Set `update=true` and your Wi-Fi details in `settings.ini`. The check runs quietly in the background once VentPuck has connected to the car, so the gauge works as normal while it checks. If it finds a newer version, it downloads and installs it in the background, and the new version runs the next time VentPuck starts. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
 
 Release versions look like `1.0.0.0` and betas look like `1.0.0.0b1`. On the Release channel only releases are used. On the Beta channel a beta is only used if it's newer than the latest release, so if the release and beta are the same version, or the release is newer, you get the release. Betas are test builds that may be unstable, so choosing Beta in the menu shows a warning first.
 
@@ -142,16 +145,29 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.0.1.0**
+**Version 1.1.0.0**
 
-- **_1.0.1.0_** Throttle position now learns your car's closed position and shows it as 0%, instead of around 15% with your foot off.
-- **_1.0.1.0_** Load and throttle readings are now included in the serial and SD card log, along with the raw throttle value.
+- **_1.1.0.0_** Works with more adapters. New `adapter_name` setting, plus support for ELM327 clones that use the FFE0/FFE1 Bluetooth service.
+- **_1.1.0.0_** The accent colour now works in colour mode too, changing the background gradient, text, icons and buttons.
+- **_1.1.0.0_** IAT is now labelled "Intake Air".
+- **_1.1.0.0_** RPM, boost and speed update faster, as temperatures and voltage are now read less often.
+- **_1.1.0.0_** The update check no longer holds up start up. It runs in the background once connected and the update applies on the next start.
+- **_1.1.0.0_** VentPuck now reconnects in place if the adapter drops out, instead of restarting.
+- **_1.1.0.0_** Readings that stop updating show `--` after 10 seconds instead of freezing.
+- **_1.1.0.0_** Fixed a possible random restart and mismatched replies when the adapter answered late, plus more reliable throttle zeroing.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
 
 
 #### Older Updates
 
 <details markdown="1">
-<summary><strong>Version 1.x - Initial Release</strong></summary>
+<summary><strong>Version 1.x</strong></summary>
+
+**Version 1.0.1.0**
+
+- **_1.0.1.0_** Throttle position now learns your car's closed position and shows it as 0%, instead of around 15% with your foot off.
+- **_1.0.1.0_** Load and throttle readings are now included in the serial and SD card log, along with the raw throttle value.
 
 **Version 1.0.0.0 - Initial Release**
 
