@@ -149,6 +149,37 @@ pio run -e ventpuck -t upload
 
 **Version 1.1.1.0**
 
-- **_1.1.1.0_** New **Flip screen** setting, which turns the display and touch upside down for a gauge that is mounted upside down.
+- **_1.1.1.0_** **Flip screen** in the menu (`flip_screen` in `settings.ini`), which turns the display and touch by 180 degrees for a gauge that is mounted upside down. It changes straight away, and the boot and update screens are flipped too.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full list and older updates.
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.0.0**
+
+- **_1.1.0.0_** New `adapter_name` setting, so adapters other than the OBDLink can be used. It matches part of the adapter's Bluetooth name (default `OBDLink`). Leave it empty to use the first BLE OBD adapter it finds.
+- **_1.1.0.0_** Support for adapters that use the FFE0/FFE1 Bluetooth serial service, which many ELM327 clones use, as well as the FFF0 one.
+- **_1.1.0.0_** The accent colour now works in colour mode too, not just dark mode. It changes the background gradient, text, icons, buttons, menu, boot animation and update screen. The purple accent keeps the classic look and still uses `colour1` and `colour2` from `settings.ini`. The **Accent** setting is now in the menu in both modes.
+- **_1.1.0.0_** IAT is now labelled "Intake Air" on the home screen, its own screen and the start screen setting, to match Oil and Coolant.
+- **_1.1.0.0_** Oil, coolant, Intake Air and ambient temperatures are now read every 2 seconds and voltage every second, instead of on every cycle. That leaves more of the Bluetooth link for RPM, boost and speed, so they update faster, which also helps the 0-60 timer. A reading that's missing is retried sooner, so a new screen fills straight away.
+- **_1.1.0.0_** The automatic update check no longer holds up start up. It used to take up to about 35 seconds before the car connection started. Now it runs in the background once the adapter is connected (or after 30 seconds without a car). It installs any update it finds, and the new version runs the next time VentPuck starts. **Check for updates now** in the menu still works as before, with progress on screen.
+- **_1.1.0.0_** On the BMW, oil temperature (which takes about 10 adapter commands per read) no longer slows down every other reading.
+- **_1.1.0.0_** If the adapter disconnects, for example on a stall-start or a flaky adapter, VentPuck now reconnects in place instead of restarting. You no longer get the boot animation, sound and update check again.
+- **_1.1.0.0_** A reading that stops updating now shows `--` after 10 seconds, instead of freezing on the last value as if it were live. All readings clear when the adapter disconnects.
+- **_1.1.0.0_** One glitchy low throttle reading can no longer be saved as the closed-throttle position. The zero point now only moves after 5 low readings in a row.
+- **_1.1.0.0_** The serial console no longer calls itself "VentPuck OBDLink CX test".
+- **_1.1.0.0_** Fixed a possible random restart when a reply from the adapter arrived late. The reply buffer was shared between two tasks without a lock.
+- **_1.1.0.0_** A late reply to one command can no longer be read as the answer to the next one.
+
+**Version 1.0.1.0**
+
+- **_1.0.1.0_** Throttle position now learns your car's closed position and shows it as 0%, instead of around 15% with your foot off.
+- **_1.0.1.0_** Load and throttle readings are now included in the serial and SD card log, along with the raw throttle value.
+
+**Version 1.0.0.0 - Initial Release**
+
+- **_1.0.0.0_** Inital Release of VentPuck
+
+</details>
