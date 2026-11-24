@@ -15,6 +15,7 @@ struct Settings {
   String boostUnit = "bar";  // bar | psi | kpa
   String tempUnit = "C";  // C | F
   int brightness = 80;  // 5-100
+  bool flipScreen = false;  // rotated 180 degrees, for mounting upside down
   bool bootAnimation = true;
   bool bootSound = true;
   bool darkMode = false;

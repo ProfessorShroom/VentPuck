@@ -24,6 +24,7 @@ void setup() {
   displayInit();
   touchInit();
   settingsInit();
+  displaySetFlipped(g_settings.flipScreen);
   logApply();
 
   bootShow();

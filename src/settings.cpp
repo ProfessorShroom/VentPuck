@@ -78,7 +78,7 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent", "sd_log", "adapter_name"};
+                                     "temp_unit", "brightness", "flip_screen", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent", "sd_log", "adapter_name"};
 
 static bool wifiKey(const String& k, int* slot, bool* isPassword) {
   String rest;
@@ -121,6 +121,7 @@ static String iniValue(const char* key) {
   if (k == "boost_unit") return g_settings.boostUnit;
   if (k == "temp_unit") return g_settings.tempUnit;
   if (k == "brightness") return String(g_settings.brightness);
+  if (k == "flip_screen") return g_settings.flipScreen ? "true" : "false";
   if (k == "boot_animation") return g_settings.bootAnimation ? "true" : "false";
   if (k == "boot_sound") return g_settings.bootSound ? "true" : "false";
   if (k == "dark_mode") return g_settings.darkMode ? "true" : "false";
@@ -186,6 +187,8 @@ static void applyKey(String key, String val) {
   } else if (key == "brightness") {
     int b = val.toInt();
     g_settings.brightness = b < 5 ? 5 : (b > 100 ? 100 : b);
+  } else if (key == "flip_screen") {
+    g_settings.flipScreen = parseBool(val, false);
   } else if (key == "boot_animation") {
     g_settings.bootAnimation = parseBool(val, true);
   } else if (key == "boot_sound") {
@@ -266,6 +269,8 @@ static bool writeIni() {
   f.printf("home_items=%s\n\n", iniValue("home_items").c_str());
   f.print("# Display\n");
   f.printf("brightness=%s\n", iniValue("brightness").c_str());
+  f.print("# Flip screen: true turns the display and touch upside down, for a gauge that is mounted upside down\n");
+  f.printf("flip_screen=%s\n", iniValue("flip_screen").c_str());
   f.printf("boot_animation=%s\n", iniValue("boot_animation").c_str());
   f.printf("boot_sound=%s\n", iniValue("boot_sound").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");

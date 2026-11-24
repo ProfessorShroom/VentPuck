@@ -26,8 +26,8 @@ static const int LOAD_PAGE = 7;
 static const int RUN_PAGE = 8;
 static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 19;
-static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 16};
+static const int MENU_ROWS = 20;
+static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 19, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 16};
 
 struct MetricDef {
   const char* key;
@@ -700,6 +700,9 @@ static void menuText(int id, char* out, size_t n) {
     case 16:
       snprintf(out, n, "Version %s", FW_VERSION);
       break;
+    case 19:
+      snprintf(out, n, "Flip screen: %s", g_settings.flipScreen ? "On" : "Off");
+      break;
     case 18:
       snprintf(out, n, "SD logging: %s", !g_sdOk ? "No card" : (g_settings.sdLog ? "On" : "Off"));
       break;
@@ -930,6 +933,9 @@ static void menuClick(lv_event_t* e) {
     g_settings.bootAnimation = !g_settings.bootAnimation;
   } else if (id == 17) {
     g_settings.bootSound = !g_settings.bootSound;
+  } else if (id == 19) {
+    g_settings.flipScreen = !g_settings.flipScreen;
+    displaySetFlipped(g_settings.flipScreen);
   } else if (id == 18) {
     if (!g_sdOk) return;
     g_settings.sdLog = !g_settings.sdLog;

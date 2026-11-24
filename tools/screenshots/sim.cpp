@@ -32,6 +32,7 @@ void bootStart() {}
 bool bootRunning() { return false; }
 void displayInit() {}
 void displaySetBrightness(int) {}
+void displaySetFlipped(bool) {}
 void displayLoop() {}
 void touchInit() {}
 bool touchPressed() { return false; }

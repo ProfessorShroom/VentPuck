@@ -35,7 +35,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
 - Outside air temperature shown small in the top corner of every screen, only if the car reports it.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
-- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel and version.
+- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel and version.
 - Dark mode with a pure black background, which suits the AMOLED.
 - Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
 - A choice of accent colour for the text, icons and buttons in either mode. In colour mode it changes the background gradient too, and the purple accent uses your own gradient colours from the .ini file.
@@ -98,6 +98,7 @@ temp_unit=C
 start_screen=last
 home_items=oil,coolant,boost,rpm
 brightness=80
+flip_screen=false
 boot_animation=true
 boot_sound=true
 dark_mode=false
@@ -119,6 +120,7 @@ sd_log=false
 | `start_screen` | `last`, `home`, `boost`, `temps`, `rpm`, `speed`, `voltage`, `iat`, `load`, `zerosixty` or `faults` |
 | `home_items` | Four of `boost`, `oil`, `coolant`, `rpm`, `speed`, `voltage`, `iat`, `load`, `throttle` |
 | `brightness` | 5 to 100 |
+| `flip_screen` | `true` or `false`, turns the display and touch upside down for a gauge that is mounted upside down (also in the menu as **Flip screen**) |
 | `boot_animation` | `true` or `false` |
 | `boot_sound` | `true` or `false`, a short chime through the speaker at start up |
 | `dark_mode` | `true` or `false` |
@@ -145,6 +147,18 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
+**Version 1.1.1.0**
+
+- **_1.1.1.0_** New **Flip screen** setting, which turns the display and touch upside down for a gauge that is mounted upside down.
+
+See [CHANGELOG.md](CHANGELOG.md) for the full list.
+
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x</strong></summary>
+
 **Version 1.1.0.0**
 
 - **_1.1.0.0_** Works with more adapters. New `adapter_name` setting, plus support for ELM327 clones that use the FFE0/FFE1 Bluetooth service.
@@ -155,14 +169,6 @@ pio run -e ventpuck -t upload
 - **_1.1.0.0_** VentPuck now reconnects in place if the adapter drops out, instead of restarting.
 - **_1.1.0.0_** Readings that stop updating show `--` after 10 seconds instead of freezing.
 - **_1.1.0.0_** Fixed a possible random restart and mismatched replies when the adapter answered late, plus more reliable throttle zeroing.
-
-See [CHANGELOG.md](CHANGELOG.md) for the full list.
-
-
-#### Older Updates
-
-<details markdown="1">
-<summary><strong>Version 1.x</strong></summary>
 
 **Version 1.0.1.0**
 

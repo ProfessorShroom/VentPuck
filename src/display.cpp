@@ -43,6 +43,7 @@ void displayInit() {
   dispDrv.flush_cb = flushCb;
   dispDrv.rounder_cb = rounderCb;
   dispDrv.draw_buf = &drawBuf;
+  dispDrv.sw_rotate = 1;
   lv_disp_drv_register(&dispDrv);
 }
 
@@ -50,6 +51,12 @@ void displaySetBrightness(int percent) {
   if (percent < 0) percent = 0;
   if (percent > 100) percent = 100;
   gfx->setBrightness((uint8_t)(percent * 255 / 100));
+}
+
+// LVGL rotates the touch input to match
+void displaySetFlipped(bool flipped) {
+  lv_disp_rot_t rot = flipped ? LV_DISP_ROT_180 : LV_DISP_ROT_NONE;
+  if (lv_disp_get_rotation(nullptr) != rot) lv_disp_set_rotation(nullptr, rot);
 }
 
 // slow frame logging

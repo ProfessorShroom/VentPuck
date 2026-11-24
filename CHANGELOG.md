@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1.0
+
+### Added
+- **Flip screen** in the menu (`flip_screen` in `settings.ini`), which turns the display and touch by 180 degrees for a gauge that is mounted upside down. It changes straight away, and the boot and update screens are flipped too.
+
+
 ## 1.1.0.0
 
 ### Added
