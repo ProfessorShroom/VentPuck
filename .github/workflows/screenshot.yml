@@ -77,6 +77,6 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WEBSITE_DISPATCH_TOKEN }}
         run: |
-          gh api repos/ProfessorShroom/professorshroom.github.io/dispatches \
+          gh api repos/ProfessorShroom/professorshroom.com/dispatches \
             -f event_type=readme-updated \
             -f "client_payload[repo]=${{ github.repository }}"

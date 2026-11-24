@@ -64,9 +64,9 @@ jobs:
           if ! gh release view "$TAG" > /dev/null 2>&1; then
             FLAG=""
             case "${{ steps.ver.outputs.version }}" in *b*) FLAG="--prerelease" ;; esac
-            # Use this version's section of CHANGELOG.md as the notes, or GitHub's generated notes if there isn't one
+            # Use this version's section of CHANGELOG.md (or CHANGELOG-BETA.md) as the notes, or GitHub's generated notes if there isn't one
             VER="${{ steps.ver.outputs.version }}"
-            awk -v v="$VER" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md > notes.md 2>/dev/null || true
+            awk -v v="$VER" '$0 == "## " v {on=1; next} /^## / {on=0} on' CHANGELOG.md CHANGELOG-BETA.md > notes.md 2>/dev/null || true
             if [ -s notes.md ]; then
               gh release create "$TAG" --title "$TAG" --notes-file notes.md $FLAG
             else

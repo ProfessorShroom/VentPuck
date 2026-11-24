@@ -151,32 +151,4 @@ pio run -e ventpuck -t upload
 
 - **_1.1.1.0_** New **Flip screen** setting, which turns the display and touch upside down for a gauge that is mounted upside down.
 
-See [CHANGELOG.md](CHANGELOG.md) for the full list.
-
-
-#### Older Updates
-
-<details markdown="1">
-<summary><strong>Version 1.x</strong></summary>
-
-**Version 1.1.0.0**
-
-- **_1.1.0.0_** Works with more adapters. New `adapter_name` setting, plus support for ELM327 clones that use the FFE0/FFE1 Bluetooth service.
-- **_1.1.0.0_** The accent colour now works in colour mode too, changing the background gradient, text, icons and buttons.
-- **_1.1.0.0_** IAT is now labelled "Intake Air".
-- **_1.1.0.0_** RPM, boost and speed update faster, as temperatures and voltage are now read less often.
-- **_1.1.0.0_** The update check no longer holds up start up. It runs in the background once connected and the update applies on the next start.
-- **_1.1.0.0_** VentPuck now reconnects in place if the adapter drops out, instead of restarting.
-- **_1.1.0.0_** Readings that stop updating show `--` after 10 seconds instead of freezing.
-- **_1.1.0.0_** Fixed a possible random restart and mismatched replies when the adapter answered late, plus more reliable throttle zeroing.
-
-**Version 1.0.1.0**
-
-- **_1.0.1.0_** Throttle position now learns your car's closed position and shows it as 0%, instead of around 15% with your foot off.
-- **_1.0.1.0_** Load and throttle readings are now included in the serial and SD card log, along with the raw throttle value.
-
-**Version 1.0.0.0 - Initial Release**
-
-- **_1.0.0.0_** Inital Release of VentPuck
-
-</details>
+See [CHANGELOG.md](CHANGELOG.md) for the full list and older updates.
