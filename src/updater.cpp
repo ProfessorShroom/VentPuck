@@ -39,7 +39,6 @@ static lv_obj_t* cover = nullptr;
 static lv_obj_t* titleLbl = nullptr;
 static lv_obj_t* statusLbl = nullptr;
 static lv_obj_t* bar = nullptr;
-// Set while the automatic check runs in its own task. LVGL isn't thread safe, so nothing may touch the screen then.
 static bool quiet = false;
 
 static void uiOpen() {
@@ -349,8 +348,6 @@ static bool takeRequest() {
   return now;
 }
 
-// forced: the menu asked for a check, so it runs before anything else with progress on screen.
-// Otherwise it's the automatic check, which runs quietly in the background and installs an update for the next start.
 static void checkAndInstall(bool forced) {
   if (forced) uiOpen();
   const char* error = nullptr;
@@ -439,7 +436,6 @@ void updaterBoot() {
 }
 
 static void backgroundTask(void*) {
-  // Let the adapter connect and probe first, so the Wi-Fi doesn't slow that down. Without a car, go ahead after 30 s.
   uint32_t t0 = millis();
   while (g_live.state != OBD_LIVE && millis() - t0 < 30000) delay(500);
   quiet = true;

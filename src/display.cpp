@@ -53,7 +53,11 @@ void displaySetBrightness(int percent) {
   gfx->setBrightness((uint8_t)(percent * 255 / 100));
 }
 
-// LVGL rotates the touch input to match
+void displayOff() {
+  gfx->setBrightness(0);
+  gfx->displayOff();
+}
+
 void displaySetFlipped(bool flipped) {
   lv_disp_rot_t rot = flipped ? LV_DISP_ROT_180 : LV_DISP_ROT_NONE;
   if (lv_disp_get_rotation(nullptr) != rot) lv_disp_set_rotation(nullptr, rot);

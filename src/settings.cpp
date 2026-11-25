@@ -78,7 +78,7 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "flip_screen", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "update_channel", "accent", "sd_log", "adapter_name"};
+                                     "temp_unit", "brightness", "flip_screen", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "top_reading", "update_channel", "accent", "sd_log", "adapter_name"};
 
 static bool wifiKey(const String& k, int* slot, bool* isPassword) {
   String rest;
@@ -125,6 +125,7 @@ static String iniValue(const char* key) {
   if (k == "boot_animation") return g_settings.bootAnimation ? "true" : "false";
   if (k == "boot_sound") return g_settings.bootSound ? "true" : "false";
   if (k == "dark_mode") return g_settings.darkMode ? "true" : "false";
+  if (k == "top_reading") return g_settings.topReading ? "true" : "false";
   if (k == "sd_log") return g_settings.sdLog ? "true" : "false";
   if (k == "vehicle") return g_settings.vehicle;
   if (k == "adapter_name") return g_settings.adapterName;
@@ -195,6 +196,8 @@ static void applyKey(String key, String val) {
     g_settings.bootSound = parseBool(val, true);
   } else if (key == "dark_mode") {
     g_settings.darkMode = parseBool(val, false);
+  } else if (key == "top_reading") {
+    g_settings.topReading = parseBool(val, true);
   } else if (key == "sd_log") {
     g_settings.sdLog = parseBool(val, false);
   } else if (key == "vehicle") {
@@ -273,6 +276,8 @@ static bool writeIni() {
   f.printf("flip_screen=%s\n", iniValue("flip_screen").c_str());
   f.printf("boot_animation=%s\n", iniValue("boot_animation").c_str());
   f.printf("boot_sound=%s\n", iniValue("boot_sound").c_str());
+  f.print("# Top reading: true shows the outside temperature at the top of the screen, or the battery voltage if the car doesn't report it\n");
+  f.printf("top_reading=%s\n", iniValue("top_reading").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");
   f.printf("dark_mode=%s\n", iniValue("dark_mode").c_str());
   f.print("# Accent colour: purple, blue, cyan, green, yellow, orange, red, pink or white. Purple uses colour1 and colour2 for the gradient\n");

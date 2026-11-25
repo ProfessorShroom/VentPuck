@@ -3,3 +3,4 @@
 
 void touchInit();
 bool touchPressed();
+bool touchIdle();

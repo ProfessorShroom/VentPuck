@@ -1,5 +1,18 @@
 # Changelog
 
+## 1.1.2.0
+
+### Added
+- The outside temperature turns ice blue with a snowflake at 3°C (37°F) or below, as a frost warning.
+- If the car doesn't report an outside temperature, the battery voltage is shown at the top instead. It's left out on the Voltage screen, on the home screen if Voltage is one of its readings, and on the 0-60 screen so the timer keeps its full speed.
+- **Top reading** in the menu (`top_reading` in `settings.ini`), which turns off the outside temperature and voltage at the top of the screen. It's on by default, and when it's off they aren't requested from the car for the top of the screen either.
+- **Shut down** in the menu, which disconnects from the adapter, turns the screen off and puts VentPuck to sleep. Tap the screen or cycle the power to start it again.
+
+### Changed
+- The outside temperature has moved from the top right to the top middle of every screen, with a thermometer icon, so it no longer crowds the large readings.
+- The β badge on beta builds has moved to the top middle too, next to the outside temperature.
+
+
 ## 1.1.1.0
 
 ### Added

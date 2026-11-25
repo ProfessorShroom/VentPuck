@@ -4,4 +4,5 @@
 void displayInit();
 void displaySetBrightness(int percent);
 void displaySetFlipped(bool flipped);
+void displayOff();
 void displayLoop();

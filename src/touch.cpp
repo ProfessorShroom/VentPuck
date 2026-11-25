@@ -71,3 +71,5 @@ void touchInit() {
 }
 
 bool touchPressed() { return pressed; }
+
+bool touchIdle() { return !pressed && !touchPending && digitalRead(TP_INT) == HIGH; }

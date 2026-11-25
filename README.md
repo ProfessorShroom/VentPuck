@@ -33,9 +33,10 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - Single reading screens for boost, RPM, speed, battery voltage and intake air temperature, each with oil and coolant temperature always shown at the bottom.
 - An **oil and coolant** screen that shows both temperatures large, and a **load and throttle** screen that shows engine load and throttle position together. Most cars report throttle position as 15% or so with your foot off, so VentPuck learns the closed position and shows that as 0%.
 - **0-60 mph** timer (or 0-100 km/h if you use km/h). It arms itself when you scroll to it and reads speed at the full rate. Tap to reset, and your best time is saved.
-- Outside air temperature shown small in the top corner of every screen, only if the car reports it.
+- Outside air temperature at the top of every screen, which turns ice blue with a snowflake at 3°C or below. If the car doesn't report it, the battery voltage is shown instead on most screens. Both can be turned off with **Top reading** in the menu.
+- **Shut down** in the menu turns VentPuck off. Tap the screen or cycle the power to start it again.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
-- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel and version.
+- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, top reading, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel, shut down and version.
 - Dark mode with a pure black background, which suits the AMOLED.
 - Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
 - A choice of accent colour for the text, icons and buttons in either mode. In colour mode it changes the background gradient too, and the purple accent uses your own gradient colours from the .ini file.
@@ -99,6 +100,7 @@ start_screen=last
 home_items=oil,coolant,boost,rpm
 brightness=80
 flip_screen=false
+top_reading=true
 boot_animation=true
 boot_sound=true
 dark_mode=false
@@ -121,6 +123,7 @@ sd_log=false
 | `home_items` | Four of `boost`, `oil`, `coolant`, `rpm`, `speed`, `voltage`, `iat`, `load`, `throttle` |
 | `brightness` | 5 to 100 |
 | `flip_screen` | `true` or `false`, turns the display and touch upside down for a gauge that is mounted upside down (also in the menu as **Flip screen**) |
+| `top_reading` | `true` or `false`, shows the outside temperature at the top of the screen, or the battery voltage if the car doesn't report it (also in the menu as **Top reading**) |
 | `boot_animation` | `true` or `false` |
 | `boot_sound` | `true` or `false`, a short chime through the speaker at start up |
 | `dark_mode` | `true` or `false` |

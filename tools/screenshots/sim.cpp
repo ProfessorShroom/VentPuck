@@ -36,6 +36,10 @@ void displaySetFlipped(bool) {}
 void displayLoop() {}
 void touchInit() {}
 bool touchPressed() { return false; }
+bool touchIdle() { return true; }
+void powerOff() {}
+void obdStop() {}
+bool obdStopped() { return true; }
 void updaterRequestNow() {}
 void updaterBoot() {}
 void obdStart() {}

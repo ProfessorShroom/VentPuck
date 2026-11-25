@@ -47,3 +47,5 @@ struct DtcStatus {
 extern DtcStatus g_dtc;
 
 void obdStart();
+void obdStop();
+bool obdStopped();

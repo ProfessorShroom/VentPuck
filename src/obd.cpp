@@ -13,7 +13,6 @@ static NimBLEClient* client = nullptr;
 static NimBLERemoteCharacteristic* txChar = nullptr;  // FFF2 (write)
 static NimBLERemoteCharacteristic* rxChar = nullptr;  // FFF1 (notify)
 
-// Filled by the BLE host task in onNotify and read by the OBD task in cmd(), so every access holds rxMux.
 static portMUX_TYPE rxMux = portMUX_INITIALIZER_UNLOCKED;
 static char rxBuf[1024];
 static size_t rxLen = 0;
@@ -32,8 +31,6 @@ static bool bmwOil = false;
 static int bmwVariant = 0;
 static int bmwFormula = 0;
 
-// Each reading remembers when it last arrived, so a value that stops updating (a PID that stops answering,
-// or the link dropping) goes back to "--" instead of looking live.
 static const uint32_t STALE_MS = 10000;
 
 struct Tracked {
@@ -148,7 +145,6 @@ static bool advertisesSerial(const NimBLEAdvertisedDevice* d) {
   return d->isAdvertisingService(NimBLEUUID((uint16_t)0xFFF0)) || d->isAdvertisingService(NimBLEUUID((uint16_t)0xFFE0));
 }
 
-// Used when adapter_name is empty: a name that looks like an OBD adapter, or the serial service in the advert.
 static bool looksLikeObd(const NimBLEAdvertisedDevice* d, const String& lowerName) {
   return lowerName.indexOf("obd") >= 0 || lowerName.indexOf("elm") >= 0 || lowerName.indexOf("vlink") >= 0 ||
          lowerName.indexOf("vgate") >= 0 || advertisesSerial(d);
@@ -219,7 +215,6 @@ static bool connectAdapter() {
         if (uuidHas(chr->getUUID(), "fff1")) rxChar = chr;
         if (uuidHas(chr->getUUID(), "fff2")) txChar = chr;
       } else if (uuidHas(svc->getUUID(), "ffe0") && uuidHas(chr->getUUID(), "ffe1") && !rxChar && !txChar) {
-        // Many ELM327 clones use one characteristic for both directions.
         rxChar = chr;
         txChar = chr;
       }
@@ -252,8 +247,6 @@ static bool bleWrite(const String& s) {
 
 static String cmd(const String& c, uint32_t timeoutMs = 5000) {
   if (lastTimedOut) {
-    // The last command never got its prompt, so its reply may still be on the way. Give it a moment to
-    // arrive and throw it away, so it isn't read as the answer to this command.
     uint32_t t0 = millis();
     while (!gotPrompt && millis() - t0 < 300) delay(5);
   }
@@ -712,8 +705,6 @@ static float throttleScaled(float raw) {
     thrSaved = thrZero;
   }
   thrRaw = raw;
-  // Only move the zero point down after several low readings in a row, and then by the highest of them,
-  // so one glitchy reading can't be saved as the closed-throttle position.
   static int lowRun = 0;
   static float lowMax = 0.0f;
   if (raw < 30.0f && (isnan(thrZero) || raw < thrZero)) {
@@ -753,8 +744,6 @@ static void pollNeeded() {
   bool any = false;
   float v;
   auto need = [&](int bit) { return (mainMask & (1u << bit)) || (slow && (secMask & (1u << bit))); };
-  // Temperatures and voltage change slowly, so they're read on a timer instead of every cycle, leaving
-  // more of the link for RPM, boost and speed. A missing value is retried sooner so a new screen fills quickly.
   static uint32_t lastSlowRead[10] = {0};
   uint32_t now = millis();
   auto needSlow = [&](int bit, float current, uint32_t everyMs) {
@@ -927,6 +916,19 @@ LiveData g_live;
 WantData g_want;
 DtcStatus g_dtc;
 
+static volatile bool stopping = false;
+static volatile bool stopped = false;
+
+static void parkTask() {
+  if (client && client->isConnected()) {
+    client->disconnect();
+    uint32_t t0 = millis();
+    while (client->isConnected() && millis() - t0 < 1000) delay(10);
+  }
+  stopped = true;
+  for (;;) vTaskSuspend(nullptr);
+}
+
 static void obdTask(void*) {
   Log.println("\nVentPuck OBD starting");
   NimBLEDevice::init("VentPuck");
@@ -940,16 +942,18 @@ static void obdTask(void*) {
   for (;;) {
     g_live.state = OBD_SEARCHING;
     while (!connectAdapter()) {
+      if (stopping) parkTask();
       Log.println("Retrying in 3 s...\n");
       delay(3000);
     }
+    if (stopping) parkTask();
     g_live.state = OBD_CONNECTED;
     lastTimedOut = false;
     initAdapter();
     probe();
     g_live.state = OBD_LIVE;
 
-    while (client && client->isConnected()) {
+    while (!stopping && client && client->isConnected()) {
       handleSerial();
       handleDtcCommand();
       if (pollEnabled) {
@@ -960,13 +964,16 @@ static void obdTask(void*) {
       }
       expireStale();
     }
-    // Reconnect in place rather than restarting, so a stall-start or a flaky adapter doesn't replay the
-    // boot animation and update check.
+    if (stopping) parkTask();
     Log.println("Disconnected, reconnecting...");
     clearLive();
     delay(1000);
   }
 }
+
+void obdStop() { stopping = true; }
+
+bool obdStopped() { return stopped || g_live.state == OBD_STARTING || g_live.state == OBD_SEARCHING; }
 
 void obdStart() {
   xTaskCreatePinnedToCore(obdTask, "obd", 12288, nullptr, 1, nullptr, 0);

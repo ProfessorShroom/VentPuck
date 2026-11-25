@@ -15,14 +15,15 @@ struct Settings {
   String boostUnit = "bar";  // bar | psi | kpa
   String tempUnit = "C";  // C | F
   int brightness = 80;  // 5-100
-  bool flipScreen = false;  // rotated 180 degrees, for mounting upside down
+  bool flipScreen = false;
   bool bootAnimation = true;
   bool bootSound = true;
   bool darkMode = false;
+  bool topReading = true;
   bool sdLog = false;
   String accent = "purple";
   String vehicle = "generic";
-  String adapterName = "OBDLink";  // part of the adapter's Bluetooth name, or empty for any OBD adapter
+  String adapterName = "OBDLink";
   String startScreen = "last";
   String homeItems[4] = {"oil", "coolant", "boost", "rpm"};
 };

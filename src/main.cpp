@@ -7,11 +7,13 @@
 #include "boot.h"
 #include "sound.h"
 #include "obd.h"
+#include "power.h"
 #include "updater.h"
 #include "version.h"
 #include "sdlog.h"
 
 void setup() {
+  powerInit();
   Serial.setTxBufferSize(2048);
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);

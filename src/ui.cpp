@@ -11,6 +11,7 @@
 #include "touch.h"
 #include "icons.h"
 #include "launch.h"
+#include "power.h"
 #include "updater.h"
 #include "version.h"
 #include "sdlog.h"
@@ -26,8 +27,8 @@ static const int LOAD_PAGE = 7;
 static const int RUN_PAGE = 8;
 static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 20;
-static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 19, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 16};
+static const int MENU_ROWS = 22;
+static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 19, 20, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 21, 16};
 
 struct MetricDef {
   const char* key;
@@ -58,7 +59,13 @@ static const int BRIGHTNESS_STEPS[] = {20, 40, 60, 80, 100};
 static lv_color_t* gradBuf = nullptr;
 static lv_obj_t* gradCanvas = nullptr;
 static lv_obj_t* statusLbl;
-static lv_obj_t* ambientLbl;
+static lv_obj_t* topIcon;
+static lv_obj_t* topLbl;
+static const uint32_t FROST_COLOUR = 0x7FD8FF;
+static const float FROST_C = 3.0f;
+static const uint32_t AMBIENT_WAIT_MS = 5000;
+static bool voltFallback = false;
+static uint32_t ambientSeenAt = 0;
 static lv_obj_t* pageObj[PAGE_COUNT];
 static lv_obj_t* dotObj[PAGE_COUNT];
 static lv_obj_t* homeIcon[HOME_SLOTS];
@@ -404,6 +411,16 @@ static void clearEvent(lv_event_t* e) {
   }
 }
 
+static bool topVoltageAllowed() {
+  if (pageMetric(curPage) == M_VOLTAGE || curPage == RUN_PAGE) return false;
+  if (curPage == 0) {
+    for (int i = 0; i < HOME_SLOTS; i++) {
+      if (metricIndex(g_settings.homeItems[i]) == M_VOLTAGE) return false;
+    }
+  }
+  return true;
+}
+
 static void updateWant() {
   uint32_t mainMask = 0;
   uint32_t secMask = 0;
@@ -420,7 +437,10 @@ static void updateWant() {
   } else if (curPage == RUN_PAGE) {
     mainMask = 1u << M_SPEED;
   }
-  secMask |= 1u << WANT_AMBIENT;
+  if (g_settings.topReading) {
+    secMask |= 1u << WANT_AMBIENT;
+    if (voltFallback && topVoltageAllowed()) secMask |= 1u << M_VOLTAGE;
+  }
   g_want.secondary = secMask;
   g_want.main = mainMask;
 }
@@ -454,6 +474,49 @@ static void updateStrip() {
   setText(stripCoolVal, buf);
 }
 
+static void showTop(const lv_img_dsc_t* icon, const char* text, bool frost) {
+  if (lv_img_get_src(topIcon) != icon) lv_img_set_src(topIcon, icon);
+  setText(topLbl, text);
+  static bool frostShown = false;
+  if (frost != frostShown) {
+    frostShown = frost;
+    if (frost) {
+      lv_obj_set_style_text_color(topLbl, lv_color_hex(FROST_COLOUR), 0);
+      lv_obj_set_style_img_recolor(topIcon, lv_color_hex(FROST_COLOUR), 0);
+    } else {
+      lv_obj_remove_local_style_prop(topLbl, LV_STYLE_TEXT_COLOR, 0);
+      lv_obj_remove_local_style_prop(topIcon, LV_STYLE_IMG_RECOLOR, 0);
+    }
+  }
+  lv_obj_clear_flag(topIcon, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_clear_flag(topLbl, LV_OBJ_FLAG_HIDDEN);
+}
+
+static void refreshTop() {
+  float ambient = g_live.ambientC;
+  float volts = g_live.batteryV;
+  bool live = g_live.state == OBD_LIVE;
+  if (!live || !g_settings.topReading || !isnan(ambient)) ambientSeenAt = lv_tick_get();
+  bool fallback = live && lv_tick_elaps(ambientSeenAt) > AMBIENT_WAIT_MS;
+  if (fallback != voltFallback) {
+    voltFallback = fallback;
+    updateWant();
+  }
+  char val[12];
+  char buf[24];
+  if (live && g_settings.topReading && !isnan(ambient)) {
+    tempText(ambient, val, sizeof val);
+    snprintf(buf, sizeof buf, "%s°%s", val, g_settings.tempUnit.c_str());
+    showTop(ambient <= FROST_C ? &iconFrost : &iconOutside, buf, ambient <= FROST_C);
+  } else if (voltFallback && topVoltageAllowed() && !isnan(volts)) {
+    snprintf(buf, sizeof buf, "%.1f V", volts);
+    showTop(&iconBattery, buf, false);
+  } else {
+    lv_obj_add_flag(topIcon, LV_OBJ_FLAG_HIDDEN);
+    lv_obj_add_flag(topLbl, LV_OBJ_FLAG_HIDDEN);
+  }
+}
+
 static void refreshValues() {
   const char* status = "";
   switch (g_live.state) {
@@ -463,16 +526,7 @@ static void refreshValues() {
     case OBD_LIVE: status = ""; break;
   }
   setText(statusLbl, status);
-  if (isnan(g_live.ambientC)) {
-    lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
-  } else {
-    char at[12];
-    char ab[24];
-    tempText(g_live.ambientC, at, sizeof at);
-    snprintf(ab, sizeof ab, "%s°%s", at, g_settings.tempUnit.c_str());
-    setText(ambientLbl, ab);
-    lv_obj_clear_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
-  }
+  refreshTop();
   if (curPage == RUN_PAGE) {
     updateRunLabels();
     return;
@@ -703,6 +757,12 @@ static void menuText(int id, char* out, size_t n) {
     case 19:
       snprintf(out, n, "Flip screen: %s", g_settings.flipScreen ? "On" : "Off");
       break;
+    case 21:
+      snprintf(out, n, "Shut down");
+      break;
+    case 20:
+      snprintf(out, n, "Top reading: %s", g_settings.topReading ? "On" : "Off");
+      break;
     case 18:
       snprintf(out, n, "SD logging: %s", !g_sdOk ? "No card" : (g_settings.sdLog ? "On" : "Off"));
       break;
@@ -713,6 +773,9 @@ static void menuText(int id, char* out, size_t n) {
     }
   }
 }
+
+static lv_obj_t* makeLabel(lv_obj_t* parent, const lv_font_t* font, lv_color_t col, int x, int y, int w,
+                           lv_text_align_t align);
 
 static void updateMenuRows() {
   if (vehicleHasBoost()) lv_obj_clear_flag(menuBtn[3], LV_OBJ_FLAG_HIDDEN);
@@ -873,6 +936,54 @@ static void buildBetaModal(lv_obj_t* scr) {
   lv_obj_add_flag(betaModal, LV_OBJ_FLAG_HIDDEN);
 }
 
+static const uint32_t SHUTDOWN_MIN_MS = 2000;
+static const uint32_t SHUTDOWN_MAX_MS = 6000;
+static const uint32_t SHUTDOWN_IDLE_MS = 400;
+static uint32_t shutdownAt = 0;
+static uint32_t shutdownIdleAt = 0;
+
+static void shutdownCb(lv_timer_t*) {
+  if (!touchIdle()) shutdownIdleAt = lv_tick_get();
+  uint32_t waited = lv_tick_elaps(shutdownAt);
+  if (waited < SHUTDOWN_MIN_MS) return;
+  if (waited < SHUTDOWN_MAX_MS && !obdStopped()) return;
+  if (touchPressed() || lv_tick_elaps(shutdownIdleAt) < SHUTDOWN_IDLE_MS) {
+    if (touchPressed() || waited < SHUTDOWN_MAX_MS) return;
+  }
+  powerOff();
+}
+
+static void startShutdown() {
+  if (shutdownAt) return;
+  Log.println("Shutting down, tap to restart");
+  if (settingsSaveTimer) {
+    lv_timer_del(settingsSaveTimer);
+    settingsSaveTimer = nullptr;
+  }
+  settingsSave();
+  if (pageSaveTimer) {
+    lv_timer_del(pageSaveTimer);
+    savePageCb(nullptr);
+  }
+  obdStop();
+
+  lv_obj_t* cover = lv_obj_create(lv_layer_top());
+  lv_obj_remove_style_all(cover);
+  lv_obj_set_size(cover, SCREEN, SCREEN);
+  lv_obj_set_style_bg_color(cover, lv_color_hex(0x000000), 0);
+  lv_obj_set_style_bg_opa(cover, LV_OPA_COVER, 0);
+  lv_obj_add_flag(cover, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_clear_flag(cover, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_t* title = makeLabel(cover, &lv_font_montserrat_28, LAVENDER, 0, 196, SCREEN, LV_TEXT_ALIGN_CENTER);
+  lv_label_set_text(title, "Shutting down");
+  lv_obj_t* hint = makeLabel(cover, &lv_font_montserrat_20, lv_color_hex(0xFFFFFF), 0, 244, SCREEN, LV_TEXT_ALIGN_CENTER);
+  lv_label_set_text(hint, "Tap the screen to restart");
+
+  shutdownAt = lv_tick_get();
+  shutdownIdleAt = shutdownAt;
+  lv_timer_create(shutdownCb, 30, nullptr);
+}
+
 static void menuClick(lv_event_t* e) {
   if (!menuArmed) return;
   int id = (int)(intptr_t)lv_event_get_user_data(e);
@@ -881,6 +992,10 @@ static void menuClick(lv_event_t* e) {
     return;
   }
   if (id == 16) return;
+  if (id == 21) {
+    startShutdown();
+    return;
+  }
   if (id == 14) {
     if (g_settings.updateChannel == "beta") setChannel("release");
     else lv_obj_clear_flag(betaModal, LV_OBJ_FLAG_HIDDEN);
@@ -936,6 +1051,9 @@ static void menuClick(lv_event_t* e) {
   } else if (id == 19) {
     g_settings.flipScreen = !g_settings.flipScreen;
     displaySetFlipped(g_settings.flipScreen);
+  } else if (id == 20) {
+    g_settings.topReading = !g_settings.topReading;
+    updateWant();
   } else if (id == 18) {
     if (!g_sdOk) return;
     g_settings.sdLog = !g_settings.sdLog;
@@ -1161,14 +1279,18 @@ static bool isBetaBuild() {
 static void buildChrome(lv_obj_t* scr) {
   statusLbl = makeLabel(scr, &lv_font_montserrat_20, lv_color_hex(0xFFFFFF), 0, 60, SCREEN, LV_TEXT_ALIGN_CENTER);
   lv_label_set_text(statusLbl, "");
-  ambientLbl = makeLabel(scr, &lv_font_montserrat_20, LAVENDER, 296, 72, 74, LV_TEXT_ALIGN_RIGHT);
-  lv_label_set_text(ambientLbl, "");
-  lv_obj_add_flag(ambientLbl, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_t* row = lv_obj_create(scr);
+  lv_obj_remove_style_all(row);
+  lv_obj_set_size(row, 220, 26);
+  lv_obj_set_pos(row, (SCREEN - 220) / 2, 32);
+  lv_obj_clear_flag(row, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
+  lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
+  lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
+  lv_obj_set_style_pad_column(row, 6, 0);
   if (isBetaBuild()) {
-    lv_obj_t* badge = lv_obj_create(scr);
+    lv_obj_t* badge = lv_obj_create(row);
     lv_obj_remove_style_all(badge);
     lv_obj_set_size(badge, 26, 26);
-    lv_obj_set_pos(badge, 98, 66);
     lv_obj_set_style_radius(badge, LV_RADIUS_CIRCLE, 0);
     lv_obj_add_style(badge, &stBtnMain, 0);
     lv_obj_set_style_bg_opa(badge, LV_OPA_COVER, 0);
@@ -1179,6 +1301,11 @@ static void buildChrome(lv_obj_t* scr) {
     lv_obj_set_style_img_recolor_opa(glyph, LV_OPA_COVER, 0);
     lv_obj_align(glyph, LV_ALIGN_CENTER, 0, 1);
   }
+  topIcon = makeIcon(row, &iconOutside, 0, 0);
+  topLbl = makeLabel(row, &lv_font_montserrat_20, LAVENDER, 0, 0, LV_SIZE_CONTENT, LV_TEXT_ALIGN_LEFT);
+  lv_label_set_text(topLbl, "");
+  lv_obj_add_flag(topIcon, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_add_flag(topLbl, LV_OBJ_FLAG_HIDDEN);
   int dots = 0;
   for (int i = 0; i < PAGE_COUNT; i++) dots += pageEnabled(i);
   int startX = SCREEN / 2 - (dots * 10 + (dots - 1) * 6) / 2;
