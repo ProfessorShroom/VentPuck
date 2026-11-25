@@ -150,15 +150,24 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.1.0**
+**Version 1.1.2.0**
 
-- **_1.1.1.0_** **Flip screen** in the menu (`flip_screen` in `settings.ini`), which turns the display and touch by 180 degrees for a gauge that is mounted upside down. It changes straight away, and the boot and update screens are flipped too.
+- **_1.1.2.0_** The outside temperature turns ice blue with a snowflake at 3°C (37°F) or below, as a frost warning.
+- **_1.1.2.0_** If the car doesn't report an outside temperature, the battery voltage is shown at the top instead. It's left out on the Voltage screen, on the home screen if Voltage is one of its readings, and on the 0-60 screen so the timer keeps its full speed.
+- **_1.1.2.0_** **Top reading** in the menu (`top_reading` in `settings.ini`), which turns off the outside temperature and voltage at the top of the screen. It's on by default, and when it's off they aren't requested from the car for the top of the screen either.
+- **_1.1.2.0_** **Shut down** in the menu, which disconnects from the adapter, turns the screen off and puts VentPuck to sleep. Tap the screen or cycle the power to start it again.
+- **_1.1.2.0_** The outside temperature has moved from the top right to the top middle of every screen, with a thermometer icon, so it no longer crowds the large readings.
+- **_1.1.2.0_** The β badge on beta builds has moved to the top middle too, next to the outside temperature.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.1.0**
+
+- **_1.1.1.0_** **Flip screen** in the menu (`flip_screen` in `settings.ini`), which turns the display and touch by 180 degrees for a gauge that is mounted upside down. It changes straight away, and the boot and update screens are flipped too.
 
 **Version 1.1.0.0**
 
