@@ -544,6 +544,8 @@ static void refreshValues() {
     case OBD_CONNECTED: status = "Connected"; break;
     case OBD_LIVE: status = ""; break;
   }
+  const char* update = updaterStatus();
+  if (update) status = update;
   setText(statusLbl, status);
   refreshTop();
   if (curPage == RUN_PAGE) {

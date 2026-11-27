@@ -2,6 +2,14 @@
 
 Release notes for beta versions. Full releases are in [CHANGELOG.md](CHANGELOG.md).
 
+## 1.1.7.0b1
+
+### Changed
+- The automatic update check runs when VentPuck starts again, before it connects to the car, instead of in the background once the car is connected. The screen no longer freezes while it checks. The dashboard comes straight up and the text at the top shows what it's doing ("Connecting to Wi-Fi...", "Checking the time...", "Checking for updates..."). The car connection starts as soon as the check is done, which takes up to about 10 seconds when there's no Wi-Fi in range.
+- If the check finds an update, it now shows the update screen with progress, installs it and restarts straight into the new version, like **Check for updates now**. Before, it installed silently and the new version only ran the next time VentPuck started, so it often looked like nothing had happened.
+- The car readings are no longer paused for the update check, because the check is finished before the car connection starts.
+- The automatic check tries Wi-Fi once instead of three times, so start up is never held up for long.
+
 ## 1.1.0.0b2
 
 ### Added

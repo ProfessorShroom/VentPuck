@@ -120,7 +120,7 @@ sd_log=false
 | --- | --- |
 | `vehicle` | `generic` (Generic Boost), `genericna` (Generic NA), `meganers3`, `clio4rs`, `megane4rs`, `bmwe8x`, `bmwe8xturbo` (135i / 1M) |
 | `adapter_name` | Part of the adapter's Bluetooth name, not case sensitive (default `OBDLink`). Leave it empty to use the first BLE OBD adapter it finds |
-| `update` | `true` or `false`, whether to check for updates in the background after it starts |
+| `update` | `true` or `false`, whether to check for updates each time it starts |
 | `update_channel` | `release` or `beta` |
 | `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
 | `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle, used with the `purple` theme |
@@ -142,7 +142,7 @@ The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check
 
 ### Updates
 
-Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Add your Wi-Fi details to `settings.ini`, then turn on **Auto update** in the menu (or set `update=true` in `settings.ini`). The check runs quietly in the background once VentPuck has connected to the car. Bluetooth and Wi-Fi share the same radio, so the readings pause while it checks and show `--` until it's done, then carry on as normal. If it finds a newer version, it downloads and installs it in the background, and the new version runs the next time VentPuck starts. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
+Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Add your Wi-Fi details to `settings.ini`, then turn on **Auto update** in the menu (or set `update=true` in `settings.ini`). The check runs each time VentPuck starts, before it connects to the car, because Bluetooth and Wi-Fi share the same radio. The screen stays usable while it checks, and the text at the top shows what it's doing. The car connection starts as soon as the check is done. If it finds a newer version, it shows the update screen with progress, installs it and restarts straight into the new version. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
 
 Release versions look like `1.0.0.0` and betas look like `1.0.0.0b1`. On the Release channel only releases are used. On the Beta channel a beta is only used if it's newer than the latest release, so if the release and beta are the same version, or the release is newer, you get the release. Betas are test builds that may be unstable, so choosing Beta in the menu shows a warning first.
 

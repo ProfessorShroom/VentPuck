@@ -3,4 +3,7 @@
 
 void updaterRequestNow();
 void updaterBoot();
-void updaterStartBackground();
+void updaterStartAuto();
+bool updaterBusy();
+const char* updaterStatus();
+void updaterLoop();
