@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.4.0
+
+### Changed
+- **Brightness** in the menu now steps every 10%, from 10% to 100%, instead of every 20%.
+- The home screen readings, labels and icons are bigger and easier to read at a glance.
+
 ## 1.1.3.0
 
 ### Added

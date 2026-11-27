@@ -54,7 +54,7 @@ static int pageMetric(int p) {
 
 static const char* START_OPTIONS[] = {"last", "home", "boost", "temps", "rpm", "speed", "voltage", "iat", "load", "zerosixty", "faults"};
 static const int START_OPTION_COUNT = 11;
-static const int BRIGHTNESS_STEPS[] = {20, 40, 60, 80, 100};
+static const int BRIGHTNESS_STEPS[] = {10, 20, 30, 40, 50, 60, 70, 80, 90, 100};
 
 static lv_color_t* gradBuf = nullptr;
 static lv_obj_t* gradCanvas = nullptr;
@@ -1160,18 +1160,20 @@ static lv_obj_t* makeIcon(lv_obj_t* parent, const lv_img_dsc_t* src, int x, int 
 static void buildHomePage(lv_obj_t* scr) {
   pageObj[0] = makeContainer(scr);
   for (int i = 0; i < HOME_SLOTS; i++) {
-    int top = 96 + i * 76;
+    int top = 76 + i * 84;
     int m = metricIndex(g_settings.homeItems[i]);
-    homeIcon[i] = makeIcon(pageObj[0], METRICS[m].icon, 76, top + 14);
-    homeLabel[i] = makeLabel(pageObj[0], &lv_font_montserrat_28, LAVENDER, 140, top + 20, 150, LV_TEXT_ALIGN_LEFT);
+    homeIcon[i] = makeIcon(pageObj[0], METRICS[m].icon, 60, top + 12);
+    lv_img_set_pivot(homeIcon[i], 0, 0);
+    lv_img_set_zoom(homeIcon[i], 300);
+    homeLabel[i] = makeLabel(pageObj[0], &lv_font_montserrat_34, LAVENDER, 132, top + 20, 176, LV_TEXT_ALIGN_LEFT);
     lv_label_set_text(homeLabel[i], METRICS[m].label);
-    homeValue[i] = makeLabel(pageObj[0], &lv_font_montserrat_28, lv_color_hex(0xFFFFFF), 176, top + 20, 220, LV_TEXT_ALIGN_RIGHT);
+    homeValue[i] = makeLabel(pageObj[0], &lv_font_montserrat_34, lv_color_hex(0xFFFFFF), 170, top + 20, 240, LV_TEXT_ALIGN_RIGHT);
     lv_label_set_text(homeValue[i], "--");
     if (i < HOME_SLOTS - 1) {
       lv_obj_t* line = lv_obj_create(pageObj[0]);
       lv_obj_remove_style_all(line);
-      lv_obj_set_size(line, 340, 2);
-      lv_obj_set_pos(line, 63, top + 74);
+      lv_obj_set_size(line, 360, 2);
+      lv_obj_set_pos(line, 53, top + 82);
       lv_obj_add_style(line, &stFill, 0);
       lv_obj_set_style_bg_opa(line, LV_OPA_30, 0);
     }
