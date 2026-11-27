@@ -158,6 +158,20 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
+**Version 1.1.3.0**
+
+- **_1.1.3.0_** Two new themes, **BMW** and **BMW Modern**. BMW makes all the text and icons the orange of a classic BMW instrument cluster. BMW Modern makes the labels, units and icons orange and the readings white.
+- **_1.1.3.0_** **Accent** is now called **Theme**, in the menu and in `settings.ini` (`theme`). The colours work as before under the same names, and an existing `accent` setting is still read.
+- **_1.1.3.0_** The VENT PUCK wordmark in the boot animation now follows the theme.
+- **_1.1.3.0_** Dark mode is now on by default. If you've already set `dark_mode`, your setting is kept.
+- **_1.1.3.0_** The automatic update check now pauses the car readings while it runs, and tries Wi-Fi up to three times. Bluetooth and Wi-Fi share the same radio, and with the readings running the check often couldn't connect or download, so updates only worked from **Check for updates now**. The readings show `--` during the check, then carry on as normal.
+
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x</strong></summary>
+
 **Version 1.1.2.0**
 
 - **_1.1.2.0_** The outside temperature turns ice blue with a snowflake at 3°C (37°F) or below, as a frost warning.
@@ -166,12 +180,6 @@ pio run -e ventpuck -t upload
 - **_1.1.2.0_** **Shut down** in the menu, which disconnects from the adapter, turns the screen off and puts VentPuck to sleep. Tap the screen or cycle the power to start it again.
 - **_1.1.2.0_** The outside temperature has moved from the top right to the top middle of every screen, with a thermometer icon, so it no longer crowds the large readings.
 - **_1.1.2.0_** The β badge on beta builds has moved to the top middle too, next to the outside temperature.
-
-
-#### Older Updates
-
-<details markdown="1">
-<summary><strong>Version 1.x</strong></summary>
 
 **Version 1.1.1.0**
 
