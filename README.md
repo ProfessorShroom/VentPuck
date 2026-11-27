@@ -45,7 +45,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 
 ### Example screens
 
-The boot screen, then in swipe order: Home, Boost, Oil and coolant, Intake air, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
+The boot screen, then in swipe order: Home, Boost, Oil and coolant, Intake air, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes, then the settings menu.
 
 Dark mode, the default:
 

@@ -10,6 +10,7 @@ SCREENS = [
     "Speed", "Voltage", "Load and throttle", "0-60", "Faults",
 ]
 PAGES += [(f"page{i:02d}", name) for i, name in enumerate(SCREENS)]
+PAGES += [("menu", "Menu")]
 COLUMNS = 6
 TILE = 363
 GAP = 14
@@ -41,7 +42,7 @@ def main():
         page = Image.open(f"{src}/{file}.ppm").convert("RGB").resize((TILE, TILE), Image.LANCZOS)
         sheet.paste(page, (x, y + LABEL_HEIGHT), mask)
 
-        draw.text((x + TILE / 2, y + LABEL_HEIGHT / 2), name if i == 0 else f"{i}. {name}", font=font, fill=TEXT, anchor="mm")
+        draw.text((x + TILE / 2, y + LABEL_HEIGHT / 2), f"{i}. {name}" if file.startswith("page") else name, font=font, fill=TEXT, anchor="mm")
 
     sheet.save(out, optimize=True)
     print(f"Saved {out} ({width} x {height})")

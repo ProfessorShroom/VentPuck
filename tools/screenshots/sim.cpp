@@ -137,5 +137,18 @@ int main(int argc, char** argv) {
     printf("Saved %s\n", path);
     saved++;
   }
+
+  showPage(0, false);
+  openMenu();
+  lv_obj_invalidate(lv_scr_act());
+  run(300);
+  char menuPath[512];
+  snprintf(menuPath, sizeof menuPath, "%s/menu.ppm", outDir);
+  if (!savePpm(menuPath)) {
+    fprintf(stderr, "Couldn't write %s\n", menuPath);
+    return 1;
+  }
+  printf("Saved %s\n", menuPath);
+  closeMenu();
   return saved == PAGE_COUNT ? 0 : 1;
 }
