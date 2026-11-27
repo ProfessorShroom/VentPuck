@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.7.0
+
+### Added
+- When the automatic update check has installed an update, a download badge appears at the top of the screen, so you know there's one waiting. Tap the badge, or choose **Restart into** the new version in the menu (where **Check for updates now** usually is), to restart straight into it. Otherwise the new version runs the next time VentPuck starts, as before.
+
 ## 1.1.6.0
 
 ### Added

@@ -160,17 +160,21 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.6.0**
+**Version 1.1.7.0**
 
-- **_1.1.6.0_** If an update keeps crashing, VentPuck goes back to the version you had before. A new version is on trial until it has run for 5 minutes in one go. If it crashes 3 times before then, VentPuck switches back to the previous version and won't install that version again, only a newer one. Turning the ignition off, a missing adapter or no car connection don't count as crashes, so they never cause a rollback. This protects updates from 1.1.6.0 onwards.
-- **_1.1.6.0_** If the car connection locks up for a minute, VentPuck restarts itself instead of freezing with the last readings on screen.
-- **_1.1.6.0_** Updates are only installed if GitHub provides a checksum for them, so a download can always be checked before it's installed.
+- **_1.1.7.0_** When the automatic update check has installed an update, a download badge appears at the top of the screen, so you know there's one waiting. Tap the badge, or choose **Restart into** the new version in the menu (where **Check for updates now** usually is), to restart straight into it. Otherwise the new version runs the next time VentPuck starts, as before.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.6.0**
+
+- **_1.1.6.0_** If an update keeps crashing, VentPuck goes back to the version you had before. A new version is on trial until it has run for 5 minutes in one go. If it crashes 3 times before then, VentPuck switches back to the previous version and won't install that version again, only a newer one. Turning the ignition off, a missing adapter or no car connection don't count as crashes, so they never cause a rollback. This protects updates from 1.1.6.0 onwards.
+- **_1.1.6.0_** If the car connection locks up for a minute, VentPuck restarts itself instead of freezing with the last readings on screen.
+- **_1.1.6.0_** Updates are only installed if GitHub provides a checksum for them, so a download can always be checked before it's installed.
 
 **Version 1.1.5.0**
 
