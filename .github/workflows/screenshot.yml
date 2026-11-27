@@ -40,6 +40,7 @@ jobs:
       - name: Install tools
         if: steps.version.outputs.beta != 'true'
         run: |
+          sudo rm -f /etc/apt/sources.list.d/*microsoft*
           sudo apt-get -o Acquire::Retries=5 update
           sudo apt-get -o Acquire::Retries=5 install -y g++ make python3-pil fonts-dejavu-core
 
