@@ -48,4 +48,5 @@ extern DtcStatus g_dtc;
 
 void obdStart();
 void obdStop();
+void obdPause(bool pause);
 bool obdStopped();

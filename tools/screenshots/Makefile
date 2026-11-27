@@ -7,8 +7,8 @@ CFLAGS := -O2 -w -DLV_CONF_INCLUDE_SIMPLE -Istubs -I$(ROOT)/include -I$(ROOT)/sr
 CXXFLAGS := $(CFLAGS) -std=gnu++17
 
 LVGL_SRC = $(shell find $(LVGL_DIR)/src -name '*.c')
-APP_SRC := $(ROOT)/src/icons.c $(ROOT)/src/icon_beta.c $(ROOT)/src/icons_top.c $(ROOT)/src/font_digits.c
-OBJS := $(patsubst %.c,$(BUILD)/%.o,$(notdir $(LVGL_SRC) $(APP_SRC))) $(BUILD)/sim.o
+APP_SRC := $(ROOT)/src/icons.c $(ROOT)/src/icon_beta.c $(ROOT)/src/icons_top.c $(ROOT)/src/font_digits.c $(ROOT)/src/font_wordmark.c $(ROOT)/src/logo_default.c
+OBJS := $(patsubst %.c,$(BUILD)/%.o,$(notdir $(LVGL_SRC) $(APP_SRC))) $(BUILD)/sim.o $(BUILD)/boot.o
 
 vpath %.c $(sort $(dir $(LVGL_SRC) $(APP_SRC)))
 
@@ -19,6 +19,9 @@ $(BUILD)/%.o: %.c | $(BUILD)
 	$(CC) $(CFLAGS) -c $< -o $@
 
 $(BUILD)/sim.o: sim.cpp $(ROOT)/src/ui.cpp | $(BUILD)
+	$(CXX) $(CXXFLAGS) -c $< -o $@
+
+$(BUILD)/boot.o: $(ROOT)/src/boot.cpp | $(BUILD)
 	$(CXX) $(CXXFLAGS) -c $< -o $@
 
 $(BUILD):

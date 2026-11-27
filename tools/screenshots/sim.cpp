@@ -2,10 +2,12 @@
 
 #include <lvgl.h>
 #include <vector>
+#include <cstring>
 #include "settings.h"
 #include "obd.h"
 #include "launch.h"
 #include "sdlog.h"
+#include "boot.h"
 
 static uint32_t g_fakeMs = 0;
 extern "C" uint32_t millis(void) { return g_fakeMs; }
@@ -27,9 +29,6 @@ int wifiCount() { return 0; }
 bool vehicleHasBoost() { return g_settings.vehicle != "genericna" && g_settings.vehicle != "bmwe8x"; }
 void logInit() {}
 void logApply() {}
-void bootShow() {}
-void bootStart() {}
-bool bootRunning() { return false; }
 void displayInit() {}
 void displaySetBrightness(int) {}
 void displaySetFlipped(bool) {}
@@ -82,6 +81,7 @@ int main(int argc, char** argv) {
   const char* outDir = argc > 1 ? argv[1] : ".";
 
   g_settings.startScreen = "home";
+  g_settings.darkMode = argc > 2 && strcmp(argv[2], "dark") == 0;
   g_live.state = OBD_LIVE;
   g_live.oilC = 92;
   g_live.coolantC = 88;
@@ -109,7 +109,17 @@ int main(int argc, char** argv) {
   drv.full_refresh = 1;
   lv_disp_drv_register(&drv);
 
-  uiBuild(lv_scr_act());
+  bootShow();
+  bootStart();
+  run(1000);
+  char bootPath[512];
+  snprintf(bootPath, sizeof bootPath, "%s/boot.ppm", outDir);
+  if (!savePpm(bootPath)) {
+    fprintf(stderr, "Couldn't write %s\n", bootPath);
+    return 1;
+  }
+  printf("Saved %s\n", bootPath);
+  while (bootRunning()) run(100);
   run(200);
 
   int saved = 0;

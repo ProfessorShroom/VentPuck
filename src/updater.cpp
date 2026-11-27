@@ -62,7 +62,7 @@ static void uiOpen() {
   lv_obj_set_width(statusLbl, 340);
   lv_obj_set_pos(statusLbl, 63, 185);
   lv_obj_set_style_text_font(statusLbl, &lv_font_montserrat_20, 0);
-  lv_obj_set_style_text_color(statusLbl, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(statusLbl, lv_color_hex(theme.value), 0);
   lv_obj_set_style_text_align(statusLbl, LV_TEXT_ALIGN_CENTER, 0);
   lv_label_set_long_mode(statusLbl, LV_LABEL_LONG_WRAP);
 
@@ -362,7 +362,16 @@ static void checkAndInstall(bool forced) {
   Log.printf("Update: running %s, channel %s, %d Wi-Fi network(s) set\n", FW_VERSION, g_settings.updateChannel.c_str(),
                 wifiCount());
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
-  if (!connectWifi(forced ? 12000 : 10000)) {
+  bool joined = false;
+  for (int attempt = 0; attempt < (forced ? 1 : 3) && !joined; attempt++) {
+    if (attempt) {
+      Log.printf("Update: Wi-Fi didn't connect, retrying (%d of 3)\n", attempt + 1);
+      radioOff();
+      delay(2000);
+    }
+    joined = connectWifi(forced ? 12000 : 15000);
+  }
+  if (!joined) {
     Log.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
@@ -384,7 +393,8 @@ static void checkAndInstall(bool forced) {
     uiClose();
     return;
   }
-  Log.println("Update: clock set, reading the release list");
+  Log.printf("Update: clock set, reading the release list (free internal heap %u, largest block %u)\n",
+             (unsigned)heap_caps_get_free_size(MALLOC_CAP_INTERNAL), (unsigned)heap_caps_get_largest_free_block(MALLOC_CAP_INTERNAL));
   FwVersion current;
   versionParse(FW_VERSION, &current);
   bool beta = g_settings.updateChannel == "beta";
@@ -439,7 +449,16 @@ static void backgroundTask(void*) {
   uint32_t t0 = millis();
   while (g_live.state != OBD_LIVE && millis() - t0 < 30000) delay(500);
   quiet = true;
+  bool paused = g_live.state == OBD_LIVE;
+  if (paused) {
+    Log.println("Update: pausing car readings for the update check");
+    obdPause(true);
+  }
   checkAndInstall(false);
+  if (paused) {
+    obdPause(false);
+    Log.println("Update: car readings resumed");
+  }
   quiet = false;
   vTaskDelete(nullptr);
 }

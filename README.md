@@ -36,19 +36,27 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - Outside air temperature at the top of every screen, which turns ice blue with a snowflake at 3°C or below. If the car doesn't report it, the battery voltage is shown instead on most screens. Both can be turned off with **Top reading** in the menu.
 - **Shut down** in the menu turns VentPuck off. Tap the screen or cycle the power to start it again.
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
-- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, top reading, start screen, home screen readings, boot animation, boot sound, dark mode, accent colour, update channel, shut down and version.
+- Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, top reading, start screen, home screen readings, boot animation, boot sound, dark mode, theme, update channel, shut down and version.
 - Dark mode with a pure black background, which suits the AMOLED.
 - Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
-- A choice of accent colour for the text, icons and buttons in either mode. In colour mode it changes the background gradient too, and the purple accent uses your own gradient colours from the .ini file.
+- A choice of theme for the text, icons and buttons in either mode: purple, blue, cyan, green, yellow, orange, red, pink, white, BMW or BMW Modern. In colour mode it changes the background gradient too, and the purple theme uses your own gradient colours from the .ini file. BMW makes all the text the orange of a classic BMW instrument cluster, and BMW Modern makes the labels orange and the readings white.
 - Boot animation with your own logo. Put a `logo.png` on the SD card to replace the default. This must be no larger than 1024x1024 and 1MB in size. I would suggest around 700x700 maximum for speed.
 - OTA updates over Wi-Fi from GitHub, with a Release or Beta channel.
 
 ### Example screens
 
-In swipe order: Home, Boost, Oil and coolant, Intake air, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
+The boot screen, then in swipe order: Home, Boost, Oil and coolant, Intake air, RPM, Speed, Voltage, Load and throttle, 0-60 and Fault codes.
+
+Dark mode, the default:
 
 <p align="center">
-  <img src="images/ventpuckScreens.png" alt="VentPuck screens"/>
+  <img src="images/ventpuckScreensDark.png" alt="VentPuck screens in dark mode"/>
+</p>
+
+Colour mode:
+
+<p align="center">
+  <img src="images/ventpuckScreens.png" alt="VentPuck screens in colour mode"/>
 </p>
 
 ### Supported cars
@@ -103,8 +111,8 @@ flip_screen=false
 top_reading=true
 boot_animation=true
 boot_sound=true
-dark_mode=false
-accent=purple
+dark_mode=true
+theme=purple
 sd_log=false
 ```
 
@@ -115,7 +123,7 @@ sd_log=false
 | `update` | `true` or `false`, whether to check for updates in the background after it starts |
 | `update_channel` | `release` or `beta` |
 | `ssid`, `password` | Your Wi-Fi, only used to check for updates, you can provide up to 5 different networks |
-| `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle, used with the `purple` accent |
+| `colour1`, `colour2` | Dial gradient as hex `#RRGGBB`, outer edge and middle, used with the `purple` theme |
 | `speed_unit` | `mph` or `kph` |
 | `boost_unit` | `bar`, `psi` or `kpa` |
 | `temp_unit` | `C` or `F` |
@@ -126,15 +134,15 @@ sd_log=false
 | `top_reading` | `true` or `false`, shows the outside temperature at the top of the screen, or the battery voltage if the car doesn't report it (also in the menu as **Top reading**) |
 | `boot_animation` | `true` or `false` |
 | `boot_sound` | `true` or `false`, a short chime through the speaker at start up |
-| `dark_mode` | `true` or `false` |
-| `accent` | Accent colour, in both dark and colour mode: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink` or `white` |
+| `dark_mode` | `true` or `false` (default `true`) |
+| `theme` | Theme, in both dark and colour mode: `purple`, `blue`, `cyan`, `green`, `yellow`, `orange`, `red`, `pink`, `white`, `bmw` (all text BMW cluster orange) or `bmwmodern` (orange labels, white readings). The old `accent` key still works |
 | `sd_log` | `true` or `false`, writes the serial output to `ventpuck.log` on the card (also in the menu as **SD logging**) |
 
 The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check for updates.
 
 ### Updates
 
-Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Set `update=true` and your Wi-Fi details in `settings.ini`. The check runs quietly in the background once VentPuck has connected to the car, so the gauge works as normal while it checks. If it finds a newer version, it downloads and installs it in the background, and the new version runs the next time VentPuck starts. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
+Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Set `update=true` and your Wi-Fi details in `settings.ini`. The check runs quietly in the background once VentPuck has connected to the car. Bluetooth and Wi-Fi share the same radio, so the readings pause while it checks and show `--` until it's done, then carry on as normal. If it finds a newer version, it downloads and installs it in the background, and the new version runs the next time VentPuck starts. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
 
 Release versions look like `1.0.0.0` and betas look like `1.0.0.0b1`. On the Release channel only releases are used. On the Beta channel a beta is only used if it's newer than the latest release, so if the release and beta are the same version, or the release is newer, you get the release. Betas are test builds that may be unstable, so choosing Beta in the menu shows a warning first.
 

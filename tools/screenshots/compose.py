@@ -3,10 +3,14 @@ import sys
 from PIL import Image, ImageDraw, ImageFont
 
 PAGES = [
+    ("boot", "Boot"),
+]
+SCREENS = [
     "Home", "Boost", "Oil and coolant", "IAT", "RPM",
     "Speed", "Voltage", "Load and throttle", "0-60", "Faults",
 ]
-COLUMNS = 5
+PAGES += [(f"page{i:02d}", name) for i, name in enumerate(SCREENS)]
+COLUMNS = 6
 TILE = 363
 GAP = 14
 LABEL_HEIGHT = 48
@@ -29,17 +33,17 @@ def main():
     ImageDraw.Draw(mask).ellipse((0, 0, TILE * SCALE - 1, TILE * SCALE - 1), fill=255)
     mask = mask.resize((TILE, TILE), Image.LANCZOS)
 
-    for i, name in enumerate(PAGES):
+    for i, (file, name) in enumerate(PAGES):
         col, row = i % COLUMNS, i // COLUMNS
         x = GAP + col * (TILE + GAP)
         y = row * (LABEL_HEIGHT + TILE)
 
-        page = Image.open(f"{src}/page{i:02d}.ppm").convert("RGB").resize((TILE, TILE), Image.LANCZOS)
+        page = Image.open(f"{src}/{file}.ppm").convert("RGB").resize((TILE, TILE), Image.LANCZOS)
         tile = Image.new("RGB", (TILE, TILE), (0, 0, 0))
         tile.paste(page, (0, 0), mask)
         sheet.paste(tile, (x, y + LABEL_HEIGHT))
 
-        draw.text((x + TILE / 2, y + LABEL_HEIGHT / 2), f"{i + 1}. {name}", font=font, fill=TEXT, anchor="mm")
+        draw.text((x + TILE / 2, y + LABEL_HEIGHT / 2), name if i == 0 else f"{i}. {name}", font=font, fill=TEXT, anchor="mm")
 
     sheet.save(out, optimize=True)
     print(f"Saved {out} ({width} x {height})")

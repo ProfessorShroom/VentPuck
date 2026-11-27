@@ -114,27 +114,40 @@ static String vehicleAtOpen;
 
 static const lv_color_t LAVENDER = LV_COLOR_MAKE(0xD9, 0xB8, 0xFF);
 
-struct AccentDef {
+static const uint32_t BMW_ORANGE = 0xFF6A00;
+
+enum ThemeStyle : uint8_t {
+  TS_ACCENT,
+  TS_BMW,
+  TS_BMW_MODERN
+};
+
+struct ThemeDef {
   const char* key;
   const char* label;
   uint32_t base;
+  ThemeStyle style;
 };
 
-static const AccentDef ACCENTS[] = {{"purple", "Purple", 0x8A5CFF}, {"blue", "Blue", 0x3C8CFF}, {"cyan", "Cyan", 0x1CC8D8},
-                                    {"green", "Green", 0x3CD070},   {"yellow", "Yellow", 0xF2C230}, {"orange", "Orange", 0xFF8A2A},
-                                    {"red", "Red", 0xFF4A4A},       {"pink", "Pink", 0xFF5CA8},     {"white", "White", 0xDDDDDD}};
-static const int ACCENT_COUNT = 9;
+static const ThemeDef THEMES[] = {{"purple", "Purple", 0x8A5CFF, TS_ACCENT}, {"blue", "Blue", 0x3C8CFF, TS_ACCENT},
+                                  {"cyan", "Cyan", 0x1CC8D8, TS_ACCENT},     {"green", "Green", 0x3CD070, TS_ACCENT},
+                                  {"yellow", "Yellow", 0xF2C230, TS_ACCENT}, {"orange", "Orange", 0xFF8A2A, TS_ACCENT},
+                                  {"red", "Red", 0xFF4A4A, TS_ACCENT},       {"pink", "Pink", 0xFF5CA8, TS_ACCENT},
+                                  {"white", "White", 0xDDDDDD, TS_ACCENT},   {"bmw", "BMW", BMW_ORANGE, TS_BMW},
+                                  {"bmwmodern", "BMW Modern", BMW_ORANGE, TS_BMW_MODERN}};
+static const int THEME_COUNT = sizeof THEMES / sizeof THEMES[0];
 
 static lv_style_t stText;
+static lv_style_t stValue;
 static lv_style_t stIcon;
 static lv_style_t stFill;
 static lv_style_t stBtnMain;
 static lv_style_t stBtnDark;
 static lv_style_t stBtnPressed;
 
-static int accentIndex() {
-  for (int i = 0; i < ACCENT_COUNT; i++) {
-    if (g_settings.accent == ACCENTS[i].key) return i;
+static int themeIndex() {
+  for (int i = 0; i < THEME_COUNT; i++) {
+    if (g_settings.theme == THEMES[i].key) return i;
   }
   return 0;
 }
@@ -149,8 +162,9 @@ static uint32_t mixHex(uint32_t a, uint32_t b, int pct) {
   return out;
 }
 
-static void initAccentStyles() {
+static void initThemeStyles() {
   lv_style_init(&stText);
+  lv_style_init(&stValue);
   lv_style_init(&stIcon);
   lv_style_init(&stFill);
   lv_style_init(&stBtnMain);
@@ -159,11 +173,11 @@ static void initAccentStyles() {
 }
 
 ThemeColours uiTheme() {
-  ThemeColours t = {g_settings.colour1, g_settings.colour2, 0x0D0620, 0xD9B8FF, 0xEAD9FF, 0x5A1FE0, 0x2A0A78, 0x8A5CFF};
-  int idx = accentIndex();
+  ThemeColours t = {g_settings.colour1, g_settings.colour2, 0x0D0620, 0xD9B8FF, 0xEAD9FF, 0x5A1FE0, 0x2A0A78, 0x8A5CFF, 0xFFFFFF};
+  int idx = themeIndex();
   bool dark = g_settings.darkMode;
   if (idx != 0) {
-    uint32_t base = ACCENTS[idx].base;
+    uint32_t base = THEMES[idx].base;
     t.bgOuter = mixHex(base, 0x000000, 81);
     t.bgCentre = mixHex(base, 0x000000, 58);
     t.menuBg = mixHex(base, 0x000000, 92);
@@ -173,13 +187,18 @@ ThemeColours uiTheme() {
     t.btnDark = mixHex(base, 0x000000, dark ? 75 : 70);
     t.btnPressed = base;
   }
+  if (THEMES[idx].style != TS_ACCENT) {
+    t.text = t.icon = THEMES[idx].base;
+    if (THEMES[idx].style == TS_BMW) t.value = THEMES[idx].base;
+  }
   if (dark) t.bgOuter = t.bgCentre = t.menuBg = 0x000000;
   return t;
 }
 
-static void applyAccent() {
+static void applyThemeStyles() {
   ThemeColours t = uiTheme();
   lv_style_set_text_color(&stText, lv_color_hex(t.text));
+  lv_style_set_text_color(&stValue, lv_color_hex(t.value));
   lv_style_set_img_recolor(&stIcon, lv_color_hex(t.icon));
   lv_style_set_bg_color(&stFill, lv_color_hex(t.text));
   lv_style_set_bg_color(&stBtnMain, lv_color_hex(t.btnMain));
@@ -743,7 +762,7 @@ static void menuText(int id, char* out, size_t n) {
       snprintf(out, n, "Dark mode: %s", g_settings.darkMode ? "On" : "Off");
       break;
     case 13:
-      snprintf(out, n, "Accent: %s", ACCENTS[accentIndex()].label);
+      snprintf(out, n, "Theme: %s", THEMES[themeIndex()].label);
       break;
     case 14:
       snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
@@ -874,7 +893,7 @@ static void applyTheme() {
     }
   }
   if (menuObj) lv_obj_set_style_bg_color(menuObj, lv_color_hex(t.menuBg), 0);
-  applyAccent();
+  applyThemeStyles();
 }
 
 static void setChannel(const char* channel) {
@@ -1062,7 +1081,7 @@ static void menuClick(lv_event_t* e) {
     g_settings.darkMode = !g_settings.darkMode;
     applyTheme();
   } else if (id == 13) {
-    g_settings.accent = ACCENTS[(accentIndex() + 1) % ACCENT_COUNT].key;
+    g_settings.theme = THEMES[(themeIndex() + 1) % THEME_COUNT].key;
     applyTheme();
   } else {
     int slot = id - 7;
@@ -1123,6 +1142,7 @@ static lv_obj_t* makeLabel(lv_obj_t* parent, const lv_font_t* font, lv_color_t c
   lv_obj_set_pos(l, x, y);
   lv_obj_set_style_text_font(l, font, 0);
   if (col.full == LAVENDER.full) lv_obj_add_style(l, &stText, 0);
+  else if (col.full == lv_color_hex(0xFFFFFF).full) lv_obj_add_style(l, &stValue, 0);
   else lv_obj_set_style_text_color(l, col, 0);
   lv_obj_set_style_text_align(l, align, 0);
   return l;
@@ -1384,8 +1404,8 @@ static int startPage() {
 }
 
 void uiBuild(lv_obj_t* scr) {
-  initAccentStyles();
-  applyAccent();
+  initThemeStyles();
+  applyThemeStyles();
   fixHomeSlots();
   buildBackground(scr);
   buildHomePage(scr);

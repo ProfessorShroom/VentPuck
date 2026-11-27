@@ -53,14 +53,17 @@ jobs:
         run: |
           make -j"$(nproc)" LVGL_DIR=lvgl
           mkdir -p out
+          mkdir -p out-dark
           ./ventpuck-sim out
+          ./ventpuck-sim out-dark dark
           python3 compose.py out ../../images/ventpuckScreens.png
+          python3 compose.py out-dark ../../images/ventpuckScreensDark.png
 
       - name: Commit screenshot
         if: steps.version.outputs.beta != 'true'
         id: commit
         run: |
-          git add images/ventpuckScreens.png
+          git add images/ventpuckScreens.png images/ventpuckScreensDark.png
           if git diff --cached --quiet; then
             echo "Screenshot unchanged."
             echo "changed=false" >> "$GITHUB_OUTPUT"

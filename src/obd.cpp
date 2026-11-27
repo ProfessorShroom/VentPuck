@@ -19,6 +19,8 @@ static size_t rxLen = 0;
 static volatile bool gotPrompt = false;
 static bool lastTimedOut = false;
 static bool pollEnabled = true;
+static volatile bool pauseRequested = false;
+static volatile bool pauseActive = false;
 static bool supported[256] = {false};
 static bool worked[256] = {false};
 static bool renaultOil = false;
@@ -956,7 +958,8 @@ static void obdTask(void*) {
     while (!stopping && client && client->isConnected()) {
       handleSerial();
       handleDtcCommand();
-      if (pollEnabled) {
+      pauseActive = pauseRequested;
+      if (pollEnabled && !pauseActive) {
         if (pollAllMode) pollOnce();
         else pollNeeded();
       } else {
@@ -972,6 +975,16 @@ static void obdTask(void*) {
 }
 
 void obdStop() { stopping = true; }
+
+void obdPause(bool pause) {
+  pauseRequested = pause;
+  if (!pause) {
+    pauseActive = false;
+    return;
+  }
+  uint32_t t0 = millis();
+  while (g_live.state == OBD_LIVE && !pauseActive && millis() - t0 < 3000) delay(20);
+}
 
 bool obdStopped() { return stopped || g_live.state == OBD_STARTING || g_live.state == OBD_SEARCHING; }
 

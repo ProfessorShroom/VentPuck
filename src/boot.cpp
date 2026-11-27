@@ -244,11 +244,14 @@ static void buildBoot(lv_obj_t* scr) {
 
   wordObj = lv_label_create(scr);
   lv_label_set_recolor(wordObj, true);
-  lv_label_set_text(wordObj, "VENT#ead9ff PUCK#");
+  ThemeColours theme = uiTheme();
+  char word[40];
+  snprintf(word, sizeof word, "VENT#%06x PUCK#", (unsigned)theme.icon);
+  lv_label_set_text(wordObj, word);
   lv_obj_set_width(wordObj, LV_SIZE_CONTENT);
   lv_obj_align(wordObj, LV_ALIGN_TOP_MID, 0, 292);
   lv_obj_set_style_text_font(wordObj, &font_wordmark, 0);
-  lv_obj_set_style_text_color(wordObj, lv_color_hex(0xFFFFFF), 0);
+  lv_obj_set_style_text_color(wordObj, lv_color_hex(theme.value), 0);
   lv_obj_set_style_text_align(wordObj, LV_TEXT_ALIGN_CENTER, 0);
   lv_obj_set_style_text_letter_space(wordObj, 3, 0);
   lv_obj_set_style_text_opa(wordObj, LV_OPA_TRANSP, 0);

@@ -18,10 +18,10 @@ struct Settings {
   bool flipScreen = false;
   bool bootAnimation = true;
   bool bootSound = true;
-  bool darkMode = false;
+  bool darkMode = true;
   bool topReading = true;
   bool sdLog = false;
-  String accent = "purple";
+  String theme = "purple";
   String vehicle = "generic";
   String adapterName = "OBDLink";
   String startScreen = "last";

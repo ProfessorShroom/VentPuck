@@ -78,7 +78,7 @@ static void parseHomeItems(String val) {
 }
 
 static const char* SETTING_KEYS[] = {"update", "ssid", "password", "ssid2", "password2", "ssid3", "password3", "ssid4", "password4", "ssid5", "password5", "colour1", "colour2", "speed_unit", "boost_unit",
-                                     "temp_unit", "brightness", "flip_screen", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "top_reading", "update_channel", "accent", "sd_log", "adapter_name"};
+                                     "temp_unit", "brightness", "flip_screen", "boot_animation", "boot_sound", "vehicle", "start_screen", "home_items", "dark_mode", "top_reading", "update_channel", "theme", "sd_log", "adapter_name"};
 
 static bool wifiKey(const String& k, int* slot, bool* isPassword) {
   String rest;
@@ -105,7 +105,7 @@ static String iniValue(const char* key) {
   char buf[16];
   if (k == "update") return g_settings.update ? "true" : "false";
   if (k == "update_channel") return g_settings.updateChannel;
-  if (k == "accent") return g_settings.accent;
+  if (k == "theme") return g_settings.theme;
   int wifiSlot;
   bool wifiPw;
   if (wifiKey(k, &wifiSlot, &wifiPw)) return wifiPw ? g_settings.wifiPassword[wifiSlot] : g_settings.wifiSsid[wifiSlot];
@@ -163,11 +163,13 @@ static void applyKey(String key, String val) {
 
   if (key == "update") {
     g_settings.update = parseBool(val, false);
-  } else if (key == "accent") {
+  } else if (key == "theme" || key == "accent") {
     val.toLowerCase();
-    static const char* names[] = {"purple", "blue", "cyan", "green", "yellow", "orange", "red", "pink", "white"};
+    val.replace(" ", "");
+    val.replace("_", "");
+    static const char* names[] = {"purple", "blue", "cyan", "green", "yellow", "orange", "red", "pink", "white", "bmw", "bmwmodern"};
     for (const char* n : names) {
-      if (val == n) g_settings.accent = val;
+      if (val == n) g_settings.theme = val;
     }
   } else if (key == "update_channel") {
     val.toLowerCase();
@@ -195,7 +197,7 @@ static void applyKey(String key, String val) {
   } else if (key == "boot_sound") {
     g_settings.bootSound = parseBool(val, true);
   } else if (key == "dark_mode") {
-    g_settings.darkMode = parseBool(val, false);
+    g_settings.darkMode = parseBool(val, true);
   } else if (key == "top_reading") {
     g_settings.topReading = parseBool(val, true);
   } else if (key == "sd_log") {
@@ -259,7 +261,7 @@ static bool writeIni() {
     f.printf("%s=%s\n", key, iniValue(key).c_str());
   }
   f.print("\n");
-  f.print("# Dial gradient as hex #RRGGBB, used with the purple accent: colour1 = outer edge, colour2 = middle\n");
+  f.print("# Dial gradient as hex #RRGGBB, used with the purple theme: colour1 = outer edge, colour2 = middle\n");
   f.printf("colour1=%s\n", iniValue("colour1").c_str());
   f.printf("colour2=%s\n\n", iniValue("colour2").c_str());
   f.print("# Units: speed mph or kph, boost bar or psi or kpa, temp C or F\n");
@@ -280,8 +282,9 @@ static bool writeIni() {
   f.printf("top_reading=%s\n", iniValue("top_reading").c_str());
   f.print("# Dark mode: true makes the background black, which saves power and looks best on the AMOLED\n");
   f.printf("dark_mode=%s\n", iniValue("dark_mode").c_str());
-  f.print("# Accent colour: purple, blue, cyan, green, yellow, orange, red, pink or white. Purple uses colour1 and colour2 for the gradient\n");
-  f.printf("accent=%s\n\n", iniValue("accent").c_str());
+  f.print("# Theme: purple, blue, cyan, green, yellow, orange, red, pink, white, bmw or bmwmodern. Purple uses colour1 and colour2 for the gradient.\n");
+  f.print("# bmw makes all the text BMW cluster orange, bmwmodern makes the labels orange and the readings white\n");
+  f.printf("theme=%s\n\n", iniValue("theme").c_str());
   f.print("# Logging: true writes the serial output to ventpuck.log on the card\n");
   f.printf("sd_log=%s\n", iniValue("sd_log").c_str());
   f.close();
@@ -294,6 +297,7 @@ static void nvsLoad() {
   for (const char* k : SETTING_KEYS) {
     if (p.isKey(k)) applyKey(k, p.getString(k));
   }
+  if (!p.isKey("theme") && p.isKey("accent")) applyKey("theme", p.getString("accent"));
   p.end();
 }
 

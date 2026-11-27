@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.3.0
+
+### Added
+- Two new themes, **BMW** and **BMW Modern**. BMW makes all the text and icons the orange of a classic BMW instrument cluster. BMW Modern makes the labels, units and icons orange and the readings white.
+
+### Changed
+- **Accent** is now called **Theme**, in the menu and in `settings.ini` (`theme`). The colours work as before under the same names, and an existing `accent` setting is still read.
+- The VENT PUCK wordmark in the boot animation now follows the theme.
+- Dark mode is now on by default. If you've already set `dark_mode`, your setting is kept.
+- The automatic update check now pauses the car readings while it runs, and tries Wi-Fi up to three times. Bluetooth and Wi-Fi share the same radio, and with the readings running the check often couldn't connect or download, so updates only worked from **Check for updates now**. The readings show `--` during the check, then carry on as normal.
+
 ## 1.1.2.0
 
 ### Added
