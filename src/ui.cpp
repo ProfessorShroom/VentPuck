@@ -27,8 +27,8 @@ static const int LOAD_PAGE = 7;
 static const int RUN_PAGE = 8;
 static const int FAULT_PAGE = 9;
 static const int HOME_SLOTS = 4;
-static const int MENU_ROWS = 22;
-static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 19, 20, 6, 7, 8, 9, 10, 11, 17, 12, 13, 14, 15, 18, 21, 16};
+static const int MENU_ROWS = 23;
+static const int MENU_ORDER[MENU_ROWS] = {0, 1, 2, 3, 4, 5, 19, 20, 6, 7, 8, 9, 10, 11, 17, 12, 13, 22, 14, 15, 18, 21, 16};
 
 struct MetricDef {
   const char* key;
@@ -764,6 +764,9 @@ static void menuText(int id, char* out, size_t n) {
     case 13:
       snprintf(out, n, "Theme: %s", THEMES[themeIndex()].label);
       break;
+    case 22:
+      snprintf(out, n, "Auto update: %s", g_settings.update ? "On" : "Off");
+      break;
     case 14:
       snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
       break;
@@ -1070,6 +1073,8 @@ static void menuClick(lv_event_t* e) {
   } else if (id == 19) {
     g_settings.flipScreen = !g_settings.flipScreen;
     displaySetFlipped(g_settings.flipScreen);
+  } else if (id == 22) {
+    g_settings.update = !g_settings.update;
   } else if (id == 20) {
     g_settings.topReading = !g_settings.topReading;
     updateWant();
@@ -1340,7 +1345,7 @@ static void buildChrome(lv_obj_t* scr) {
     if (pageEnabled(i)) slot++;
     else lv_obj_add_flag(dotObj[i], LV_OBJ_FLAG_HIDDEN);
     lv_obj_set_style_radius(dotObj[i], LV_RADIUS_CIRCLE, 0);
-    lv_obj_set_style_bg_color(dotObj[i], lv_color_hex(0xFFFFFF), 0);
+    lv_obj_add_style(dotObj[i], &stFill, 0);
     lv_obj_set_style_bg_opa(dotObj[i], LV_OPA_30, 0);
     lv_obj_clear_flag(dotObj[i], LV_OBJ_FLAG_CLICKABLE);
   }

@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.5.0
+
+### Added
+- **Auto update** in the menu, which turns the automatic update check on or off. It was only in `settings.ini` before and was off by default, so the background check never ran unless you had set `update=true`. It takes effect the next time VentPuck starts.
+
+### Changed
+- The page dots at the bottom of the screen now follow the theme colour.
+
 ## 1.1.4.0
 
 ### Changed
