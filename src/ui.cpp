@@ -513,7 +513,10 @@ static void showTop(const lv_img_dsc_t* icon, const char* text, bool frost) {
 }
 
 static void refreshTop() {
-  if (updaterReady() && lv_obj_has_flag(readyBadge, LV_OBJ_FLAG_HIDDEN)) lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
+  if (updaterReady() && lv_obj_has_flag(readyBadge, LV_OBJ_FLAG_HIDDEN)) {
+    lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
+    Log.printf("Update: %s is waiting, restart to run it\n", updaterReady());
+  }
   float ambient = g_live.ambientC;
   float volts = g_live.batteryV;
   bool live = g_live.state == OBD_LIVE;
@@ -773,7 +776,7 @@ static void menuText(int id, char* out, size_t n) {
       snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
       break;
     case 15:
-      if (updaterReady()) snprintf(out, n, "Restart to update to %s", updaterReady());
+      if (updaterReady()) snprintf(out, n, "Restart into %s", updaterReady());
       else snprintf(out, n, "Check for updates now");
       break;
     case 16:
@@ -1112,6 +1115,14 @@ static void menuClick(lv_event_t* e) {
   settingsSaveSoon();
 }
 
+static void readyBadgeClick(lv_event_t*) {
+  if (bootRunning() || menuOpen || !updaterReady()) return;
+  settingsSave();
+  Log.printf("Restarting into %s\n", updaterReady());
+  delay(300);
+  ESP.restart();
+}
+
 static void rootEvent(lv_event_t* e) {
   if (bootRunning() || menuOpen) return;
   lv_event_code_t code = lv_event_get_code(e);
@@ -1343,7 +1354,9 @@ static void buildChrome(lv_obj_t* scr) {
   lv_obj_set_style_radius(readyBadge, LV_RADIUS_CIRCLE, 0);
   lv_obj_add_style(readyBadge, &stBtnMain, 0);
   lv_obj_set_style_bg_opa(readyBadge, LV_OPA_COVER, 0);
-  lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_flag(readyBadge, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_set_ext_click_area(readyBadge, 12);
+  lv_obj_add_event_cb(readyBadge, readyBadgeClick, LV_EVENT_CLICKED, nullptr);
   lv_obj_t* arrow = lv_label_create(readyBadge);
   lv_obj_set_style_text_font(arrow, &lv_font_montserrat_16, 0);
   lv_obj_set_style_text_color(arrow, lv_color_hex(0xFFFFFF), 0);

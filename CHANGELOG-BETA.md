@@ -2,6 +2,13 @@
 
 Release notes for beta versions. Full releases are in [CHANGELOG.md](CHANGELOG.md).
 
+## 1.1.7.0b3
+
+### Changed
+- Tapping the download badge at the top of the screen now restarts straight into the waiting update, the same as the menu item.
+- The menu item for a waiting update is shorter, **Restart into** the new version, so it fits on one line.
+- The log now notes when an update has been installed and is waiting for a restart.
+
 ## 1.1.7.0b2
 
 ### Added
