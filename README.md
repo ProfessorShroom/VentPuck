@@ -158,6 +158,17 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
+**Version 1.1.4.0**
+
+- **_1.1.4.0_** **Brightness** in the menu now steps every 10%, from 10% to 100%, instead of every 20%.
+- **_1.1.4.0_** The home screen readings, labels and icons are bigger and easier to read at a glance.
+
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x</strong></summary>
+
 **Version 1.1.3.0**
 
 - **_1.1.3.0_** Two new themes, **BMW** and **BMW Modern**. BMW makes all the text and icons the orange of a classic BMW instrument cluster. BMW Modern makes the labels, units and icons orange and the readings white.
@@ -165,12 +176,6 @@ pio run -e ventpuck -t upload
 - **_1.1.3.0_** The VENT PUCK wordmark in the boot animation now follows the theme.
 - **_1.1.3.0_** Dark mode is now on by default. If you've already set `dark_mode`, your setting is kept.
 - **_1.1.3.0_** The automatic update check now pauses the car readings while it runs, and tries Wi-Fi up to three times. Bluetooth and Wi-Fi share the same radio, and with the readings running the check often couldn't connect or download, so updates only worked from **Check for updates now**. The readings show `--` during the check, then carry on as normal.
-
-
-#### Older Updates
-
-<details markdown="1">
-<summary><strong>Version 1.x</strong></summary>
 
 **Version 1.1.2.0**
 
