@@ -158,16 +158,21 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.4.0**
+**Version 1.1.5.0**
 
-- **_1.1.4.0_** **Brightness** in the menu now steps every 10%, from 10% to 100%, instead of every 20%.
-- **_1.1.4.0_** The home screen readings, labels and icons are bigger and easier to read at a glance.
+- **_1.1.5.0_** **Auto update** in the menu, which turns the automatic update check on or off. It was only in `settings.ini` before and was off by default, so the background check never ran unless you had set `update=true`. It takes effect the next time VentPuck starts.
+- **_1.1.5.0_** The page dots at the bottom of the screen now follow the theme colour.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.4.0**
+
+- **_1.1.4.0_** **Brightness** in the menu now steps every 10%, from 10% to 100%, instead of every 20%.
+- **_1.1.4.0_** The home screen readings, labels and icons are bigger and easier to read at a glance.
 
 **Version 1.1.3.0**
 
