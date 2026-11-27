@@ -39,9 +39,7 @@ def main():
         y = row * (LABEL_HEIGHT + TILE)
 
         page = Image.open(f"{src}/{file}.ppm").convert("RGB").resize((TILE, TILE), Image.LANCZOS)
-        tile = Image.new("RGB", (TILE, TILE), (0, 0, 0))
-        tile.paste(page, (0, 0), mask)
-        sheet.paste(tile, (x, y + LABEL_HEIGHT))
+        sheet.paste(page, (x, y + LABEL_HEIGHT), mask)
 
         draw.text((x + TILE / 2, y + LABEL_HEIGHT / 2), name if i == 0 else f"{i}. {name}", font=font, fill=TEXT, anchor="mm")
 
