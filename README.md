@@ -160,16 +160,22 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.5.0**
+**Version 1.1.6.0**
 
-- **_1.1.5.0_** **Auto update** in the menu, which turns the automatic update check on or off. It was only in `settings.ini` before and was off by default, so the background check never ran unless you had set `update=true`. It takes effect the next time VentPuck starts.
-- **_1.1.5.0_** The page dots at the bottom of the screen now follow the theme colour.
+- **_1.1.6.0_** If an update keeps crashing, VentPuck goes back to the version you had before. A new version is on trial until it has run for 5 minutes in one go. If it crashes 3 times before then, VentPuck switches back to the previous version and won't install that version again, only a newer one. Turning the ignition off, a missing adapter or no car connection don't count as crashes, so they never cause a rollback. This protects updates from 1.1.6.0 onwards.
+- **_1.1.6.0_** If the car connection locks up for a minute, VentPuck restarts itself instead of freezing with the last readings on screen.
+- **_1.1.6.0_** Updates are only installed if GitHub provides a checksum for them, so a download can always be checked before it's installed.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.5.0**
+
+- **_1.1.5.0_** **Auto update** in the menu, which turns the automatic update check on or off. It was only in `settings.ini` before and was off by default, so the background check never ran unless you had set `update=true`. It takes effect the next time VentPuck starts.
+- **_1.1.5.0_** The page dots at the bottom of the screen now follow the theme colour.
 
 **Version 1.1.4.0**
 
