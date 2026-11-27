@@ -41,6 +41,7 @@ void obdStop() {}
 bool obdStopped() { return true; }
 void updaterRequestNow() {}
 void updaterBoot() {}
+const char* updaterReady() { return nullptr; }
 void obdStart() {}
 void launchReset(float) {}
 void launchSample(float, uint32_t) {}

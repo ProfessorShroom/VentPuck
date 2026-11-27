@@ -2,6 +2,14 @@
 
 Release notes for beta versions. Full releases are in [CHANGELOG.md](CHANGELOG.md).
 
+## 1.1.7.0b2
+
+### Added
+- When the automatic update check has installed an update, a download badge appears at the top of the screen, so you know there's one waiting. **Check for updates now** in the menu becomes **Restart to update to** the new version, which restarts straight into it. Otherwise the new version runs the next time VentPuck starts, as before.
+
+### Changed
+- The automatic update check is back to how it worked in 1.1.6.0, as the 1.1.7.0b1 change held up start up. It runs in the background once the car is connected (or after 30 seconds without a car), pauses the readings while it checks, and installs the update quietly.
+
 ## 1.1.7.0b1
 
 ### Changed

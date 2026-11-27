@@ -48,7 +48,9 @@ void setup() {
   }
 
   updaterBoot();
-  updaterStartAuto();
+
+  obdStart();
+  updaterStartBackground();
 }
 
 void loop() {
@@ -59,12 +61,6 @@ void loop() {
                   (unsigned)ESP.getFreePsram());
   }
   rollbackLoop();
-  updaterLoop();
-  static bool obdStarted = false;
-  if (!obdStarted && !updaterBusy()) {
-    obdStarted = true;
-    obdStart();
-  }
   displayLoop();
   delay(5);
 }

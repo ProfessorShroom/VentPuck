@@ -17,6 +17,7 @@
 #include "display.h"
 #include "version.h"
 #include "versionCompare.h"
+#include "obd.h"
 #include "ui.h"
 #include "rollback.h"
 
@@ -39,11 +40,9 @@ static lv_obj_t* cover = nullptr;
 static lv_obj_t* titleLbl = nullptr;
 static lv_obj_t* statusLbl = nullptr;
 static lv_obj_t* bar = nullptr;
-static bool background = false;
-static const char* volatile autoStatus = nullptr;
-static volatile bool autoBusy = false;
-static volatile bool autoFound = false;
-static Candidate autoCand;
+static bool quiet = false;
+static char readyTag[32] = "";
+static volatile bool ready = false;
 
 static void uiOpen() {
   ThemeColours theme = uiTheme();
@@ -82,17 +81,14 @@ static void uiOpen() {
 }
 
 static void uiClose() {
-  if (background) return;
+  if (quiet) return;
   if (cover) lv_obj_del(cover);
   cover = nullptr;
   displayLoop();
 }
 
 static void uiShow(const char* title, const char* status, int pct) {
-  if (background) {
-    autoStatus = status;
-    return;
-  }
+  if (quiet) return;
   if (!cover) {
     displayLoop();
     return;
@@ -137,7 +133,7 @@ static bool syncClock() {
   configTime(0, 0, "pool.ntp.org", "time.cloudflare.com");
   uint32_t t0 = millis();
   while (time(nullptr) < 1700000000 && millis() - t0 < 10000) {
-    if (!background) displayLoop();
+    if (!quiet) displayLoop();
     delay(50);
   }
   return time(nullptr) >= 1700000000;
@@ -376,7 +372,16 @@ static void checkAndInstall(bool forced) {
   Log.printf("Update: running %s, channel %s, %d Wi-Fi network(s) set\n", FW_VERSION, g_settings.updateChannel.c_str(),
                 wifiCount());
   uiShow("UPDATES", "Connecting to Wi-Fi...", -1);
-  if (!connectWifi(forced ? 12000 : 10000)) {
+  bool joined = false;
+  for (int attempt = 0; attempt < (forced ? 1 : 3) && !joined; attempt++) {
+    if (attempt) {
+      Log.printf("Update: Wi-Fi didn't connect, retrying (%d of 3)\n", attempt + 1);
+      radioOff();
+      delay(2000);
+    }
+    joined = connectWifi(forced ? 12000 : 15000);
+  }
+  if (!joined) {
     Log.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
     if (forced) {
       uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
@@ -420,17 +425,19 @@ static void checkAndInstall(bool forced) {
     }
   } else {
     Log.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
-    if (background) {
-      autoCand = c;
-      autoFound = true;
-      return;
-    }
-    if (!cover) uiOpen();
+    if (!quiet && !cover) uiOpen();
     char line[64];
     snprintf(line, sizeof line, "Version %s", c.tag);
     uiShow("UPDATING", line, 0);
     if (downloadAndFlash(c, &error)) {
       rollbackArm(c.tag);
+      if (quiet) {
+        snprintf(readyTag, sizeof readyTag, "%s", c.tag);
+        ready = true;
+        Log.printf("Update: %s installed, it runs the next time VentPuck starts\n", c.tag);
+        radioOff();
+        return;
+      }
       uiShow("UPDATED", "Restarting...", 100);
       pumpFor(1200);
       ESP.restart();
@@ -451,46 +458,27 @@ void updaterBoot() {
   checkAndInstall(true);
 }
 
-static void autoTask(void*) {
-  background = true;
+static void backgroundTask(void*) {
+  uint32_t t0 = millis();
+  while (g_live.state != OBD_LIVE && millis() - t0 < 30000) delay(500);
+  quiet = true;
+  bool paused = g_live.state == OBD_LIVE;
+  if (paused) {
+    Log.println("Update: pausing car readings for the update check");
+    obdPause(true);
+  }
   checkAndInstall(false);
-  background = false;
-  autoStatus = nullptr;
-  autoBusy = false;
+  if (paused) {
+    obdPause(false);
+    Log.println("Update: car readings resumed");
+  }
+  quiet = false;
   vTaskDelete(nullptr);
 }
 
-void updaterStartAuto() {
+void updaterStartBackground() {
   if (checkedThisBoot || !g_settings.update || wifiCount() == 0) return;
-  autoBusy = true;
-  autoStatus = "Checking for updates...";
-  if (xTaskCreatePinnedToCore(autoTask, "update", 12288, nullptr, 1, nullptr, 1) != pdPASS) {
-    autoStatus = nullptr;
-    autoBusy = false;
-  }
+  xTaskCreatePinnedToCore(backgroundTask, "update", 12288, nullptr, 1, nullptr, 1);
 }
 
-bool updaterBusy() { return autoBusy || autoFound; }
-
-const char* updaterStatus() { return autoStatus; }
-
-void updaterLoop() {
-  if (!autoFound || autoBusy) return;
-  const char* error = nullptr;
-  uiOpen();
-  char line[64];
-  snprintf(line, sizeof line, "Version %s", autoCand.tag);
-  uiShow("UPDATING", line, 0);
-  if (downloadAndFlash(autoCand, &error)) {
-    rollbackArm(autoCand.tag);
-    uiShow("UPDATED", "Restarting...", 100);
-    pumpFor(1200);
-    ESP.restart();
-  }
-  Log.printf("Update: failed: %s\n", error);
-  uiShow("UPDATE FAILED", error, -1);
-  pumpFor(3500);
-  radioOff();
-  uiClose();
-  autoFound = false;
-}
+const char* updaterReady() { return ready ? readyTag : nullptr; }

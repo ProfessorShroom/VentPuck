@@ -61,6 +61,7 @@ static lv_obj_t* gradCanvas = nullptr;
 static lv_obj_t* statusLbl;
 static lv_obj_t* topIcon;
 static lv_obj_t* topLbl;
+static lv_obj_t* readyBadge;
 static const uint32_t FROST_COLOUR = 0x7FD8FF;
 static const float FROST_C = 3.0f;
 static const uint32_t AMBIENT_WAIT_MS = 5000;
@@ -512,6 +513,7 @@ static void showTop(const lv_img_dsc_t* icon, const char* text, bool frost) {
 }
 
 static void refreshTop() {
+  if (updaterReady() && lv_obj_has_flag(readyBadge, LV_OBJ_FLAG_HIDDEN)) lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
   float ambient = g_live.ambientC;
   float volts = g_live.batteryV;
   bool live = g_live.state == OBD_LIVE;
@@ -544,8 +546,6 @@ static void refreshValues() {
     case OBD_CONNECTED: status = "Connected"; break;
     case OBD_LIVE: status = ""; break;
   }
-  const char* update = updaterStatus();
-  if (update) status = update;
   setText(statusLbl, status);
   refreshTop();
   if (curPage == RUN_PAGE) {
@@ -773,7 +773,8 @@ static void menuText(int id, char* out, size_t n) {
       snprintf(out, n, "Updates: %s", g_settings.updateChannel == "beta" ? "Beta" : "Release");
       break;
     case 15:
-      snprintf(out, n, "Check for updates now");
+      if (updaterReady()) snprintf(out, n, "Restart to update to %s", updaterReady());
+      else snprintf(out, n, "Check for updates now");
       break;
     case 16:
       snprintf(out, n, "Version %s", FW_VERSION);
@@ -1027,6 +1028,12 @@ static void menuClick(lv_event_t* e) {
   }
   if (id == 15) {
     settingsSave();
+    if (updaterReady()) {
+      Log.printf("Restarting into %s\n", updaterReady());
+      delay(300);
+      ESP.restart();
+      return;
+    }
     updaterRequestNow();
     Log.println("Update check requested, restarting");
     delay(300);
@@ -1330,6 +1337,19 @@ static void buildChrome(lv_obj_t* scr) {
     lv_obj_set_style_img_recolor_opa(glyph, LV_OPA_COVER, 0);
     lv_obj_align(glyph, LV_ALIGN_CENTER, 0, 1);
   }
+  readyBadge = lv_obj_create(row);
+  lv_obj_remove_style_all(readyBadge);
+  lv_obj_set_size(readyBadge, 26, 26);
+  lv_obj_set_style_radius(readyBadge, LV_RADIUS_CIRCLE, 0);
+  lv_obj_add_style(readyBadge, &stBtnMain, 0);
+  lv_obj_set_style_bg_opa(readyBadge, LV_OPA_COVER, 0);
+  lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_t* arrow = lv_label_create(readyBadge);
+  lv_obj_set_style_text_font(arrow, &lv_font_montserrat_16, 0);
+  lv_obj_set_style_text_color(arrow, lv_color_hex(0xFFFFFF), 0);
+  lv_label_set_text(arrow, LV_SYMBOL_DOWNLOAD);
+  lv_obj_center(arrow);
+  lv_obj_add_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
   topIcon = makeIcon(row, &iconOutside, 0, 0);
   topLbl = makeLabel(row, &lv_font_montserrat_20, LAVENDER, 0, 0, LV_SIZE_CONTENT, LV_TEXT_ALIGN_LEFT);
   lv_label_set_text(topLbl, "");
