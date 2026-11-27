@@ -52,6 +52,9 @@ jobs:
           path: ~/.platformio
           key: pio-${{ hashFiles('platformio.ini') }}
 
+      - name: Version tests
+        run: make -C tools/tests test
+
       - name: Install PlatformIO
         run: pip install platformio
 

@@ -19,6 +19,7 @@
 #include "versionCompare.h"
 #include "obd.h"
 #include "ui.h"
+#include "rollback.h"
 
 extern const uint8_t certBundleStart[] asm("_binary_certs_x509_crt_bundle_bin_start");
 extern const uint8_t certBundleEnd[] asm("_binary_certs_x509_crt_bundle_bin_end");
@@ -210,6 +211,10 @@ static bool findUpdate(Candidate& best, bool betaChannel, const FwVersion& curre
     FwVersion v;
     if (!versionParse(tag, &v)) continue;
     if (versionIsBeta(v) && !betaChannel) continue;
+    if (rollbackIsBad(tag)) {
+      Log.printf("Update: skipping %s, it was rolled back\n", tag);
+      continue;
+    }
     const char* url = nullptr;
     const char* digest = "";
     size_t size = 0;
@@ -240,6 +245,11 @@ static void hexOf(const uint8_t* in, size_t n, char* out) {
 }
 
 static bool downloadAndFlash(const Candidate& c, const char** error) {
+  if (strlen(c.sha) != 64) {
+    Log.printf("Update: %s has no SHA-256 digest, not installing it\n", c.tag);
+    *error = "The update has no checksum";
+    return false;
+  }
   NetworkClientSecure client;
   configureTls(client);
   HTTPClient http;
@@ -311,15 +321,13 @@ static bool downloadAndFlash(const Candidate& c, const char** error) {
     *error = writeFailed ? "Couldn't write the update" : "The download was cut short";
     return false;
   }
-  if (c.sha[0]) {
-    char hex[65];
-    hexOf(digest, 32, hex);
-    if (strcasecmp(hex, c.sha) != 0) {
-      Update.abort();
-      Log.printf("Update: checksum mismatch, got %s expected %s\n", hex, c.sha);
-      *error = "The update failed its checksum";
-      return false;
-    }
+  char hex[65];
+  hexOf(digest, 32, hex);
+  if (strcasecmp(hex, c.sha) != 0) {
+    Update.abort();
+    Log.printf("Update: checksum mismatch, got %s expected %s\n", hex, c.sha);
+    *error = "The update failed its checksum";
+    return false;
   }
   if (!Update.end(true)) {
     Log.printf("Update: end failed: %s\n", Update.errorString());
@@ -420,6 +428,7 @@ static void checkAndInstall(bool forced) {
     snprintf(line, sizeof line, "Version %s", c.tag);
     uiShow("UPDATING", line, 0);
     if (downloadAndFlash(c, &error)) {
+      rollbackArm(c.tag);
       if (quiet) {
         Log.printf("Update: %s installed, it runs the next time VentPuck starts\n", c.tag);
         radioOff();

@@ -8,6 +8,7 @@
 #include "dtc.h"
 #include <Preferences.h>
 #include <math.h>
+#include <esp_task_wdt.h>
 
 static NimBLEClient* client = nullptr;
 static NimBLERemoteCharacteristic* txChar = nullptr;  // FFF2 (write)
@@ -34,6 +35,7 @@ static int bmwVariant = 0;
 static int bmwFormula = 0;
 
 static const uint32_t STALE_MS = 10000;
+static const uint32_t WDT_MS = 60000;
 
 struct Tracked {
   volatile float* value;
@@ -161,6 +163,7 @@ static bool connectAdapter() {
   if (want.length()) Log.printf("Scanning for an adapter named '%s' (8 s)...\n", g_settings.adapterName.c_str());
   else Log.println("Scanning for any BLE OBD adapter (8 s)...");
   NimBLEScanResults results = scan->getResults(8000, false);
+  esp_task_wdt_reset();
 
   const NimBLEAdvertisedDevice* target = nullptr;
   for (uint32_t i = 0; i < results.getCount(); i++) {
@@ -202,10 +205,12 @@ static bool connectAdapter() {
     Log.println("Connection failed.");
     return false;
   }
+  esp_task_wdt_reset();
   Log.printf("Connected, MTU %u\n", client->getMTU());
 
   Log.printf("Secure connection: %s\n", client->secureConnection() ? "ok" : "not established");
 
+  esp_task_wdt_reset();
   Log.println("Services:");
   for (auto* svc : client->getServices(true)) {
     Log.printf("  service %s\n", svc->getUUID().toString().c_str());
@@ -256,6 +261,7 @@ static String cmd(const String& c, uint32_t timeoutMs = 5000) {
   if (!client || !txChar || !bleWrite(c + "\r")) return "WRITE FAILED";
   uint32_t start = millis();
   while (!gotPrompt && millis() - start < timeoutMs) delay(5);
+  esp_task_wdt_reset();
   bool ok = gotPrompt;
   lastTimedOut = !ok;
   String r = rxTake();
@@ -922,6 +928,7 @@ static volatile bool stopping = false;
 static volatile bool stopped = false;
 
 static void parkTask() {
+  esp_task_wdt_delete(nullptr);
   if (client && client->isConnected()) {
     client->disconnect();
     uint32_t t0 = millis();
@@ -931,8 +938,17 @@ static void parkTask() {
   for (;;) vTaskSuspend(nullptr);
 }
 
+static void watchdogStart() {
+  esp_task_wdt_config_t cfg = {.timeout_ms = WDT_MS, .idle_core_mask = 1 << 0, .trigger_panic = true};
+  esp_err_t e = esp_task_wdt_reconfigure(&cfg);
+  if (e == ESP_ERR_INVALID_STATE) e = esp_task_wdt_init(&cfg);
+  if (e == ESP_OK) e = esp_task_wdt_add(nullptr);
+  Log.printf("OBD watchdog: %s\n", e == ESP_OK ? "on" : esp_err_to_name(e));
+}
+
 static void obdTask(void*) {
   Log.println("\nVentPuck OBD starting");
+  watchdogStart();
   NimBLEDevice::init("VentPuck");
   NimBLEDevice::setMTU(247);
   NimBLEDevice::setSecurityAuth(true, false, true);
@@ -943,11 +959,14 @@ static void obdTask(void*) {
 
   for (;;) {
     g_live.state = OBD_SEARCHING;
+    esp_task_wdt_reset();
     while (!connectAdapter()) {
+      esp_task_wdt_reset();
       if (stopping) parkTask();
       Log.println("Retrying in 3 s...\n");
       delay(3000);
     }
+    esp_task_wdt_reset();
     if (stopping) parkTask();
     g_live.state = OBD_CONNECTED;
     lastTimedOut = false;
@@ -956,6 +975,7 @@ static void obdTask(void*) {
     g_live.state = OBD_LIVE;
 
     while (!stopping && client && client->isConnected()) {
+      esp_task_wdt_reset();
       handleSerial();
       handleDtcCommand();
       pauseActive = pauseRequested;

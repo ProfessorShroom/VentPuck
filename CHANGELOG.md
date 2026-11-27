@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.1.6.0
+
+### Added
+- If an update keeps crashing, VentPuck goes back to the version you had before. A new version is on trial until it has run for 5 minutes in one go. If it crashes 3 times before then, VentPuck switches back to the previous version and won't install that version again, only a newer one. Turning the ignition off, a missing adapter or no car connection don't count as crashes, so they never cause a rollback. This protects updates from 1.1.6.0 onwards.
+- If the car connection locks up for a minute, VentPuck restarts itself instead of freezing with the last readings on screen.
+
+### Changed
+- Updates are only installed if GitHub provides a checksum for them, so a download can always be checked before it's installed.
 ## 1.1.5.0
 
 ### Added
@@ -75,4 +83,4 @@
 ## 1.0.0.0 - Initial Release
 
 ### Added
-- Inital Release of VentPuck
+- Initial Release of VentPuck

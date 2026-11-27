@@ -11,6 +11,7 @@
 #include "updater.h"
 #include "version.h"
 #include "sdlog.h"
+#include "rollback.h"
 
 void setup() {
   powerInit();
@@ -18,6 +19,7 @@ void setup() {
   Serial.begin(115200);
   Serial.setTxTimeoutMs(0);
   logInit();
+  rollbackBoot();
   delay(1500);
   Log.printf("\nVentPuck %s starting (AMOLED 1.75)\n", FW_VERSION);
   Log.printf("Chip: %s, PSRAM %u bytes, free heap %u\n", ESP.getChipModel(), (unsigned)ESP.getPsramSize(),
@@ -58,6 +60,7 @@ void loop() {
     Log.printf("alive %lus, free heap %u, free PSRAM %u\n", millis() / 1000, (unsigned)ESP.getFreeHeap(),
                   (unsigned)ESP.getFreePsram());
   }
+  rollbackLoop();
   displayLoop();
   delay(5);
 }

@@ -28,7 +28,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 
 ### Features
 
-- Swipe left and right between screens. The screen you were on last is remembered, so it boot back up into that screen.
+- Swipe left and right between screens. The screen you were on last is remembered, so it boots back up into that screen.
 - **Home** screen with four readings you choose, by default oil, coolant, boost and RPM.
 - Single reading screens for boost, RPM, speed, battery voltage and intake air temperature, each with oil and coolant temperature always shown at the bottom.
 - An **oil and coolant** screen that shows both temperatures large, and a **load and throttle** screen that shows engine load and throttle position together. Most cars report throttle position as 15% or so with your foot off, so VentPuck learns the closed position and shows that as 0%.
@@ -38,7 +38,7 @@ Releases and betas are on the [Releases](https://github.com/ProfessorShroom/Vent
 - **Fault codes** screen. Scan only runs when you press the button, and clearing codes is a tap and hold with a progress bar. It refuses to clear while the car is moving.
 - Press and hold on any screen for the settings menu: car, speed, boost and temperature units, brightness, flip screen, top reading, start screen, home screen readings, boot animation, boot sound, dark mode, theme, auto update, update channel, shut down and version.
 - Dark mode with a pure black background, which suits the AMOLED.
-- Colour mode if you prefer which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
+- Colour mode, if you prefer, which by default uses my classic blue to purple gradient. You can configure any colours you want in the .ini file.
 - A choice of theme for the text, icons and buttons in either mode: purple, blue, cyan, green, yellow, orange, red, pink, white, BMW or BMW Modern. In colour mode it changes the background gradient too, and the purple theme uses your own gradient colours from the .ini file. BMW makes all the text the orange of a classic BMW instrument cluster, and BMW Modern makes the labels orange and the readings white.
 - Boot animation with your own logo. Put a `logo.png` on the SD card to replace the default. This must be no larger than 1024x1024 and 1MB in size. I would suggest around 700x700 maximum for speed.
 - OTA updates over Wi-Fi from GitHub, with a Release or Beta channel.
@@ -76,8 +76,8 @@ Changing the car restarts the gauge.
 ### Hardware
 
 - **Display / controller** - a Waveshare ESP32-S3-Touch-AMOLED-1.75, which is an ESP32-S3 with a 1.75 inch AMOLED 466x466 round capacitive touch display.
-- **OBD2 adapter** - any Bluetooth OBD2 adapter that supports **BLE** ELM327-style adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work. I used the OBDLink CX as it supports a sleep function to reduce power drain when the car is parked for longer than a few days, but the cheaper ones will work fine.
-- **Power** - 12 V to 5 V buck converter on a fuse piggyback, so the gauge turns on and off with the ignition. You could also use a USB C cable plugged in to the 12v socket like a phone charger, but this is a lot less neat.
+- **OBD2 adapter** - any **BLE** ELM327-style Bluetooth OBD2 adapter. The ESP32-S3 doesn't support Bluetooth Classic, so Classic-only adapters won't work. I used the OBDLink CX as it supports a sleep function to reduce power drain when the car is parked for longer than a few days, but the cheaper ones will work fine.
+- **Power** - 12 V to 5 V buck converter on a fuse piggyback, so the gauge turns on and off with the ignition. You could also use a USB C cable plugged in to the 12 V socket like a phone charger, but this is a lot less neat.
 - **SD card (optional)** - for `settings.ini` and a custom `logo.png`. VentPuck works fine without one, and the on-screen menu saves your settings to the gauge itself.
 
 ### Settings
@@ -145,6 +145,8 @@ The Wi-Fi password is stored as plain text, and Wi-Fi is only ever used to check
 Flash VentPuck over USB once, then it can update itself over Wi-Fi from the releases on this page. Add your Wi-Fi details to `settings.ini`, then turn on **Auto update** in the menu (or set `update=true` in `settings.ini`). The check runs quietly in the background once VentPuck has connected to the car. Bluetooth and Wi-Fi share the same radio, so the readings pause while it checks and show `--` until it's done, then carry on as normal. If it finds a newer version, it downloads and installs it in the background, and the new version runs the next time VentPuck starts. You can also run a check from the menu with **Check for updates now**, which shows progress on screen and restarts straight into the new version.
 
 Release versions look like `1.0.0.0` and betas look like `1.0.0.0b1`. On the Release channel only releases are used. On the Beta channel a beta is only used if it's newer than the latest release, so if the release and beta are the same version, or the release is newer, you get the release. Betas are test builds that may be unstable, so choosing Beta in the menu shows a warning first.
+
+If a new version crashes 3 times before it has run for 5 minutes, VentPuck goes back to the version you had before and skips that version from then on. Turning the ignition off or the car not connecting never causes this.
 
 ### Building
 
@@ -218,6 +220,6 @@ pio run -e ventpuck -t upload
 
 **Version 1.0.0.0 - Initial Release**
 
-- **_1.0.0.0_** Inital Release of VentPuck
+- **_1.0.0.0_** Initial Release of VentPuck
 
 </details>
