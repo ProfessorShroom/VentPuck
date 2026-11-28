@@ -160,15 +160,24 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.7.0**
+**Version 1.1.8.0**
 
-- **_1.1.7.0_** When the automatic update check has installed an update, a download badge appears at the top of the screen, so you know there's one waiting. Tap the badge, or choose **Restart into** the new version in the menu (where **Check for updates now** usually is), to restart straight into it. Otherwise the new version runs the next time VentPuck starts, as before.
+- **_1.1.8.0_** Bluetooth and Wi-Fi icons at the top of the screen. Each one has a red line through it when it isn't connected. Bluetooth shows the connection to the OBD adapter. Wi-Fi is only on while VentPuck checks for updates, so its icon only shows during the check: crossed out while VentPuck connects, normal once it's on Wi-Fi, and gone when the check finishes. If automatic updates are off or no Wi-Fi is set up, it doesn't show at all.
+- **_1.1.8.0_** The automatic update check shows what it's doing in the text at the top of the screen, where it normally says "Looking for adapter...": connecting to Wi-Fi, checking for updates, and how far the download has got. When it's done it says "Up to date", "Update ready, restart to use it" or what went wrong, for 5 seconds.
+- **_1.1.8.0_** The automatic update check could find a new version but fail to download it, because it ran out of memory. The secure connection to GitHub now uses VentPuck's larger spare memory, so there's plenty of room for the download.
+- **_1.1.8.0_** The automatic update check now pauses the search for the OBD adapter while it runs, as well as the car readings. Before, it only paused once the car readings had started, so with no adapter found the Bluetooth search carried on during the check and used up memory and radio time.
+- **_1.1.8.0_** VentPuck uses less memory to draw the screen, and Bluetooth only sets memory aside for one connection, since VentPuck only ever connects to one adapter. This leaves more room for downloading updates.
+- **_1.1.8.0_** On 1.1.7.0 or older, the automatic update check may still run out of memory downloading this version, because the fix only takes effect once 1.1.8.0 is installed. If it doesn't update on its own, use **Check for updates now** in the menu.
 
 
 #### Older Updates
 
 <details markdown="1">
 <summary><strong>Version 1.x</strong></summary>
+
+**Version 1.1.7.0**
+
+- **_1.1.7.0_** When the automatic update check has installed an update, a download badge appears at the top of the screen, so you know there's one waiting. Tap the badge, or choose **Restart into** the new version in the menu (where **Check for updates now** usually is), to restart straight into it. Otherwise the new version runs the next time VentPuck starts, as before.
 
 **Version 1.1.6.0**
 
