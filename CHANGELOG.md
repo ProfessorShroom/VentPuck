@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.9.0
+
+### Fixed
+- The figures on screen no longer disappear while the automatic update check runs. The check pauses the car readings while it uses Wi-Fi, and after 10 seconds without new readings the figures used to go blank, then came back once the check finished. Now the last readings stay on screen during the check and update again as soon as it's done.
+
 ## 1.1.8.2
 
 ### Fixed

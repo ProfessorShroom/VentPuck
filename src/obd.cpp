@@ -61,6 +61,13 @@ static void expireStale() {
   }
 }
 
+static void holdLive() {
+  uint32_t now = millis();
+  for (Tracked& t : tracked) {
+    if (!isnan(*t.value)) t.at = now;
+  }
+}
+
 static void clearLive() {
   for (Tracked& t : tracked) *t.value = NAN;
   g_live.baroKpa = NAN;
@@ -991,13 +998,14 @@ static void obdTask(void*) {
       handleSerial();
       handleDtcCommand();
       pauseActive = pauseRequested;
+      if (pauseActive) holdLive();
       if (pollEnabled && !pauseActive) {
         if (pollAllMode) pollOnce();
         else pollNeeded();
       } else {
         delay(50);
       }
-      expireStale();
+      if (!pauseActive) expireStale();
     }
     if (stopping) parkTask();
     Log.println("Disconnected, reconnecting...");
