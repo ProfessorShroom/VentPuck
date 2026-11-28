@@ -43,6 +43,17 @@ static lv_obj_t* bar = nullptr;
 static bool quiet = false;
 static char readyTag[32] = "";
 static volatile bool ready = false;
+static volatile bool wifiActive = false;
+static portMUX_TYPE noteLock = portMUX_INITIALIZER_UNLOCKED;
+static char noteText[48] = "";
+static volatile uint32_t noteEndedAt = 0;
+static const uint32_t NOTE_HOLD_MS = 5000;
+
+static void note(const char* text) {
+  portENTER_CRITICAL(&noteLock);
+  snprintf(noteText, sizeof noteText, "%s", text);
+  portEXIT_CRITICAL(&noteLock);
+}
 
 static void uiOpen() {
   ThemeColours theme = uiTheme();
@@ -88,7 +99,10 @@ static void uiClose() {
 }
 
 static void uiShow(const char* title, const char* status, int pct) {
-  if (quiet) return;
+  if (quiet) {
+    if (pct < 0) note(status);
+    return;
+  }
   if (!cover) {
     displayLoop();
     return;
@@ -311,7 +325,12 @@ static bool downloadAndFlash(const Candidate& c, const char** error) {
       lastUi = millis();
       char line[48];
       snprintf(line, sizeof line, "%u of %u KB", (unsigned)(got / 1024), (unsigned)(len / 1024));
-      uiShow("UPDATING", line, (int)((uint64_t)got * 100 / len));
+      int pct = (int)((uint64_t)got * 100 / len);
+      uiShow("UPDATING", line, pct);
+      if (quiet) {
+        snprintf(line, sizeof line, "Downloading update... %d%%", pct);
+        note(line);
+      }
     }
   }
   http.end();
@@ -358,7 +377,7 @@ static bool takeRequest() {
   return now;
 }
 
-static void checkAndInstall(bool forced) {
+static void runCheck(bool forced) {
   if (forced) uiOpen();
   const char* error = nullptr;
   if (wifiCount() == 0) {
@@ -383,10 +402,8 @@ static void checkAndInstall(bool forced) {
   }
   if (!joined) {
     Log.printf("Update: Wi-Fi didn't connect (status %d)\n", (int)WiFi.status());
-    if (forced) {
-      uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
-      pumpFor(2500);
-    }
+    uiShow("UPDATES", "Couldn't connect to Wi-Fi", -1);
+    pumpFor(2500);
     radioOff();
     uiClose();
     return;
@@ -395,10 +412,8 @@ static void checkAndInstall(bool forced) {
   uiShow("UPDATES", "Checking the time...", -1);
   if (!syncClock()) {
     Log.println("Update: clock didn't sync");
-    if (forced) {
-      uiShow("UPDATES", "Couldn't get the time", -1);
-      pumpFor(2500);
-    }
+    uiShow("UPDATES", "Couldn't get the time", -1);
+    pumpFor(2500);
     radioOff();
     uiClose();
     return;
@@ -413,28 +428,26 @@ static void checkAndInstall(bool forced) {
   memset(&c, 0, sizeof c);
   bool ok = findUpdate(c, beta, current, &error);
   if (!ok) {
-    if (forced) {
-      uiShow("UPDATES", error, -1);
-      pumpFor(3000);
-    }
+    uiShow("UPDATES", error, -1);
+    pumpFor(3000);
   } else if (!c.found) {
     Log.printf("Update: %s is the newest on the %s channel\n", FW_VERSION, beta ? "beta" : "release");
-    if (forced) {
-      uiShow("UPDATES", "Up to date", -1);
-      pumpFor(2000);
-    }
+    uiShow("UPDATES", "Up to date", -1);
+    pumpFor(2000);
   } else {
     Log.printf("Update: %s -> %s\n", FW_VERSION, c.tag);
     if (!quiet && !cover) uiOpen();
     char line[64];
     snprintf(line, sizeof line, "Version %s", c.tag);
     uiShow("UPDATING", line, 0);
+    if (quiet) note("Downloading update...");
     if (downloadAndFlash(c, &error)) {
       rollbackArm(c.tag);
       if (quiet) {
         snprintf(readyTag, sizeof readyTag, "%s", c.tag);
         ready = true;
         Log.printf("Update: %s installed, it runs the next time VentPuck starts\n", c.tag);
+        note("Update ready, restart to use it");
         radioOff();
         return;
       }
@@ -448,6 +461,14 @@ static void checkAndInstall(bool forced) {
   }
   radioOff();
   uiClose();
+}
+
+static void checkAndInstall(bool forced) {
+  note("");
+  wifiActive = wifiCount() > 0;
+  runCheck(forced);
+  noteEndedAt = millis();
+  wifiActive = false;
 }
 
 static bool checkedThisBoot = false;
@@ -478,3 +499,13 @@ void updaterStartBackground() {
 }
 
 const char* updaterReady() { return ready ? readyTag : nullptr; }
+
+bool updaterWifiActive() { return wifiActive; }
+
+bool updaterStatus(char* out, size_t n) {
+  if (!wifiActive && millis() - noteEndedAt > NOTE_HOLD_MS) return false;
+  portENTER_CRITICAL(&noteLock);
+  snprintf(out, n, "%s", noteText);
+  portEXIT_CRITICAL(&noteLock);
+  return out[0] != 0;
+}
