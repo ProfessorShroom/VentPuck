@@ -160,6 +160,16 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
+**Version 1.1.9.0**
+
+- **_1.1.9.0_** The figures on screen no longer disappear while the automatic update check runs. The check pauses the car readings while it uses Wi-Fi, and after 10 seconds without new readings the figures used to go blank, then came back once the check finished. Now the last readings stay on screen during the check and update again as soon as it's done.
+
+
+#### Older Updates
+
+<details markdown="1">
+<summary><strong>Version 1.x</strong></summary>
+
 **Version 1.1.8.2 / 1.1.8.1 / 1.1.8.0**
 
 - **_1.1.8.2_** 1.1.8.0 and 1.1.8.1 didn't turn on VentPuck's spare memory (PSRAM). That broke the boot logo, which showed as a white square, and stopped Wi-Fi updates from working, so those versions can't update themselves to this one. If you're on 1.1.8.0 or 1.1.8.1, install this version over USB.
@@ -170,12 +180,6 @@ pio run -e ventpuck -t upload
 - **_1.1.8.0_** The automatic update check now pauses the search for the OBD adapter while it runs, as well as the car readings. Before, it only paused once the car readings had started, so with no adapter found the Bluetooth search carried on during the check and used up memory and radio time.
 - **_1.1.8.0_** VentPuck uses less memory to draw the screen, and Bluetooth only sets memory aside for one connection, since VentPuck only ever connects to one adapter. This leaves more room for downloading updates.
 - **_1.1.8.0_** On 1.1.7.0 or older, the automatic update check may still run out of memory downloading this version, because the fix only takes effect once 1.1.8.0 is installed. If it doesn't update on its own, use **Check for updates now** in the menu.
-
-
-#### Older Updates
-
-<details markdown="1">
-<summary><strong>Version 1.x</strong></summary>
 
 **Version 1.1.7.0**
 
