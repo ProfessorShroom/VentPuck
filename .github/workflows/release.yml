@@ -58,6 +58,12 @@ jobs:
       - name: Install PlatformIO
         run: pip install platformio
 
+      - name: Pin PlatformIO in the pioarduino environment
+        run: |
+          pio pkg install -e ventpuck
+          ~/.platformio/penv/bin/python -m pip install --quiet --force-reinstall --no-deps "pioarduino==6.2.0"
+          ~/.platformio/penv/bin/pio --version
+
       - name: Build
         run: pio run -e ventpuck
 
