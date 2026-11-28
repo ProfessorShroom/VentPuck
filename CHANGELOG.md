@@ -1,5 +1,19 @@
 # Changelog
 
+## 1.1.8.0
+
+### Added
+- Bluetooth and Wi-Fi icons at the top of the screen. Each one has a red line through it when it isn't connected. Bluetooth shows the connection to the OBD adapter. Wi-Fi is only on while VentPuck checks for updates, so its icon only shows during the check: crossed out while VentPuck connects, normal once it's on Wi-Fi, and gone when the check finishes. If automatic updates are off or no Wi-Fi is set up, it doesn't show at all.
+- The automatic update check shows what it's doing in the text at the top of the screen, where it normally says "Looking for adapter...": connecting to Wi-Fi, checking for updates, and how far the download has got. When it's done it says "Up to date", "Update ready, restart to use it" or what went wrong, for 5 seconds.
+
+### Fixed
+- The automatic update check could find a new version but fail to download it, because it ran out of memory. The secure connection to GitHub now uses VentPuck's larger spare memory, so there's plenty of room for the download.
+- The automatic update check now pauses the search for the OBD adapter while it runs, as well as the car readings. Before, it only paused once the car readings had started, so with no adapter found the Bluetooth search carried on during the check and used up memory and radio time.
+
+### Changed
+- VentPuck uses less memory to draw the screen, and Bluetooth only sets memory aside for one connection, since VentPuck only ever connects to one adapter. This leaves more room for downloading updates.
+- On 1.1.7.0 or older, the automatic update check may still run out of memory downloading this version, because the fix only takes effect once 1.1.8.0 is installed. If it doesn't update on its own, use **Check for updates now** in the menu.
+
 ## 1.1.7.0
 
 ### Added
