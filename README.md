@@ -160,8 +160,9 @@ pio run -e ventpuck -t upload
 
 #### Latest Update
 
-**Version 1.1.8.1 / 1.1.8.0**
+**Version 1.1.8.2 / 1.1.8.1 / 1.1.8.0**
 
+- **_1.1.8.2_** 1.1.8.0 and 1.1.8.1 didn't turn on VentPuck's spare memory (PSRAM). That broke the boot logo, which showed as a white square, and stopped Wi-Fi updates from working, so those versions can't update themselves to this one. If you're on 1.1.8.0 or 1.1.8.1, install this version over USB.
 - **_1.1.8.1_** A behind-the-scenes fix so the screenshots of VentPuck's screens build again. Nothing changes in how VentPuck works.
 - **_1.1.8.0_** Bluetooth and Wi-Fi icons at the top of the screen. Each one has a red line through it when it isn't connected. Bluetooth shows the connection to the OBD adapter. Wi-Fi is only on while VentPuck checks for updates, so its icon only shows during the check: crossed out while VentPuck connects, normal once it's on Wi-Fi, and gone when the check finishes. If automatic updates are off or no Wi-Fi is set up, it doesn't show at all.
 - **_1.1.8.0_** The automatic update check shows what it's doing in the text at the top of the screen, where it normally says "Looking for adapter...": connecting to Wi-Fi, checking for updates, and how far the download has got. When it's done it says "Up to date", "Update ready, restart to use it" or what went wrong, for 5 seconds.
