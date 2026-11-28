@@ -502,6 +502,8 @@ const char* updaterReady() { return ready ? readyTag : nullptr; }
 
 bool updaterWifiActive() { return wifiActive; }
 
+bool updaterWifiConnected() { return WiFi.isConnected(); }
+
 bool updaterStatus(char* out, size_t n) {
   if (!wifiActive && millis() - noteEndedAt > NOTE_HOLD_MS) return false;
   portENTER_CRITICAL(&noteLock);

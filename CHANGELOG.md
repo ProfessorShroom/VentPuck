@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.8.1
+
+### Fixed
+- A behind-the-scenes fix so the screenshots of VentPuck's screens build again. Nothing changes in how VentPuck works.
+
 ## 1.1.8.0
 
 ### Added

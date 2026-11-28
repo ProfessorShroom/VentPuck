@@ -42,6 +42,9 @@ bool obdStopped() { return true; }
 void updaterRequestNow() {}
 void updaterBoot() {}
 const char* updaterReady() { return nullptr; }
+bool updaterWifiActive() { return false; }
+bool updaterWifiConnected() { return false; }
+bool updaterStatus(char*, size_t) { return false; }
 void obdStart() {}
 void launchReset(float) {}
 void launchSample(float, uint32_t) {}

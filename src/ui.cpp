@@ -2,7 +2,6 @@
 #include "ui.h"
 #include <Arduino.h>
 #include <Preferences.h>
-#include <WiFi.h>
 #include <math.h>
 #include "esp_heap_caps.h"
 #include "settings.h"
@@ -532,7 +531,7 @@ static void setLink(LinkIcon& link, bool up) {
 
 static void refreshTop() {
   setLink(btLink, g_live.state == OBD_CONNECTED || g_live.state == OBD_LIVE);
-  bool wifiUp = WiFi.isConnected();
+  bool wifiUp = updaterWifiConnected();
   setLink(wifiLink, wifiUp);
   bool showWifi = wifiUp || updaterWifiActive();
   if (showWifi == lv_obj_has_flag(wifiLink.box, LV_OBJ_FLAG_HIDDEN)) {
