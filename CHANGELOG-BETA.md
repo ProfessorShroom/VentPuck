@@ -2,6 +2,12 @@
 
 Release notes for beta versions. Full releases are in [CHANGELOG.md](CHANGELOG.md).
 
+## 1.1.8.0b3
+
+### Changed
+- The Wi-Fi icon at the top of the screen only shows for the first 2 minutes after VentPuck starts, or while Wi-Fi is connected. Wi-Fi is only on while VentPuck checks for updates, so the rest of the time it was always crossed out.
+- VentPuck uses less memory to draw the screen, and Bluetooth only sets memory aside for one connection, since VentPuck only ever connects to one adapter. This leaves more room for downloading updates.
+
 ## 1.1.8.0b1
 
 ### Added

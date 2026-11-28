@@ -11,7 +11,7 @@ static Arduino_DataBus* bus = new Arduino_ESP32QSPI(LCD_CS, LCD_SCLK, LCD_SDIO0,
 static Arduino_CO5300* gfx = new Arduino_CO5300(bus, LCD_RESET, 0 /* rotation */, LCD_WIDTH, LCD_HEIGHT, 6, 0, 0, 0);
 
 static lv_disp_draw_buf_t drawBuf;
-static const uint32_t drawBufPixels = LCD_WIDTH * LCD_HEIGHT / 10;
+static const uint32_t drawBufPixels = LCD_WIDTH * LCD_HEIGHT / 20;
 static lv_color_t buf1[drawBufPixels + 2048];
 
 static void flushCb(lv_disp_drv_t* disp, const lv_area_t* area, lv_color_t* color_p) {

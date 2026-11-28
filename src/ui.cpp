@@ -72,6 +72,7 @@ static LinkIcon btLink = {nullptr, nullptr, -1};
 static LinkIcon wifiLink = {nullptr, nullptr, -1};
 static const lv_point_t CROSS_POINTS[] = {{2, 2}, {18, 18}};
 static const uint32_t CROSS_COLOUR = 0xFF5A5A;
+static const uint32_t WIFI_ICON_MS = 120000;
 static const uint32_t FROST_COLOUR = 0x7FD8FF;
 static const float FROST_C = 3.0f;
 static const uint32_t AMBIENT_WAIT_MS = 5000;
@@ -532,7 +533,13 @@ static void setLink(LinkIcon& link, bool up) {
 
 static void refreshTop() {
   setLink(btLink, g_live.state == OBD_CONNECTED || g_live.state == OBD_LIVE);
-  setLink(wifiLink, WiFi.isConnected());
+  bool wifiUp = WiFi.isConnected();
+  setLink(wifiLink, wifiUp);
+  bool showWifi = wifiUp || millis() < WIFI_ICON_MS;
+  if (showWifi == lv_obj_has_flag(wifiLink.box, LV_OBJ_FLAG_HIDDEN)) {
+    if (showWifi) lv_obj_clear_flag(wifiLink.box, LV_OBJ_FLAG_HIDDEN);
+    else lv_obj_add_flag(wifiLink.box, LV_OBJ_FLAG_HIDDEN);
+  }
   if (updaterReady() && lv_obj_has_flag(readyBadge, LV_OBJ_FLAG_HIDDEN)) {
     lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
     Log.printf("Update: %s is waiting, restart to run it\n", updaterReady());
