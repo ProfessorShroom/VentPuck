@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.8.2
+
+### Fixed
+- 1.1.8.0 and 1.1.8.1 didn't turn on VentPuck's spare memory (PSRAM). That broke the boot logo, which showed as a white square, and stopped Wi-Fi updates from working, so those versions can't update themselves to this one. If you're on 1.1.8.0 or 1.1.8.1, install this version over USB.
+
 ## 1.1.8.1
 
 ### Fixed
