@@ -9,3 +9,4 @@ sdkconfig.defaults
 sdkconfig.ventpuck
 /CMakeLists.txt
 /dependencies.lock
+*.log
