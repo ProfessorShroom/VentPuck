@@ -3,3 +3,9 @@
 ESP32-S3-Touch-AMOLED-1.75-main.zip
 logs
 *.odg
+.dummy/
+managed_components/
+sdkconfig.defaults
+sdkconfig.ventpuck
+/CMakeLists.txt
+/dependencies.lock

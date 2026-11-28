@@ -462,16 +462,12 @@ static void backgroundTask(void*) {
   uint32_t t0 = millis();
   while (g_live.state != OBD_LIVE && millis() - t0 < 30000) delay(500);
   quiet = true;
-  bool paused = g_live.state == OBD_LIVE;
-  if (paused) {
-    Log.println("Update: pausing car readings for the update check");
-    obdPause(true);
-  }
+  Log.println(g_live.state == OBD_LIVE ? "Update: pausing car readings for the update check"
+                                       : "Update: pausing the adapter search for the update check");
+  obdPause(true);
   checkAndInstall(false);
-  if (paused) {
-    obdPause(false);
-    Log.println("Update: car readings resumed");
-  }
+  obdPause(false);
+  Log.println("Update: Bluetooth resumed");
   quiet = false;
   vTaskDelete(nullptr);
 }

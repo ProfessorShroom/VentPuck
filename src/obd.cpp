@@ -960,11 +960,23 @@ static void obdTask(void*) {
   for (;;) {
     g_live.state = OBD_SEARCHING;
     esp_task_wdt_reset();
-    while (!connectAdapter()) {
+    for (;;) {
+      esp_task_wdt_reset();
+      if (stopping) parkTask();
+      if (pauseRequested) {
+        if (!pauseActive) {
+          NimBLEDevice::getScan()->clearResults();
+          pauseActive = true;
+          Log.println("Adapter search paused");
+        }
+        delay(200);
+        continue;
+      }
+      if (connectAdapter()) break;
       esp_task_wdt_reset();
       if (stopping) parkTask();
       Log.println("Retrying in 3 s...\n");
-      delay(3000);
+      for (int i = 0; i < 30 && !pauseRequested; i++) delay(100);
     }
     esp_task_wdt_reset();
     if (stopping) parkTask();
@@ -1003,7 +1015,8 @@ void obdPause(bool pause) {
     return;
   }
   uint32_t t0 = millis();
-  while (g_live.state == OBD_LIVE && !pauseActive && millis() - t0 < 3000) delay(20);
+  uint32_t limit = g_live.state == OBD_LIVE ? 3000 : 10000;
+  while (g_live.state != OBD_CONNECTED && !pauseActive && millis() - t0 < limit) delay(20);
 }
 
 bool obdStopped() { return stopped || g_live.state == OBD_STARTING || g_live.state == OBD_SEARCHING; }

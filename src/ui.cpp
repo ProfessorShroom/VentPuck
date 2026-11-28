@@ -2,6 +2,7 @@
 #include "ui.h"
 #include <Arduino.h>
 #include <Preferences.h>
+#include <WiFi.h>
 #include <math.h>
 #include "esp_heap_caps.h"
 #include "settings.h"
@@ -62,6 +63,15 @@ static lv_obj_t* statusLbl;
 static lv_obj_t* topIcon;
 static lv_obj_t* topLbl;
 static lv_obj_t* readyBadge;
+struct LinkIcon {
+  lv_obj_t* box;
+  lv_obj_t* cross;
+  int shown;
+};
+static LinkIcon btLink = {nullptr, nullptr, -1};
+static LinkIcon wifiLink = {nullptr, nullptr, -1};
+static const lv_point_t CROSS_POINTS[] = {{2, 2}, {18, 18}};
+static const uint32_t CROSS_COLOUR = 0xFF5A5A;
 static const uint32_t FROST_COLOUR = 0x7FD8FF;
 static const float FROST_C = 3.0f;
 static const uint32_t AMBIENT_WAIT_MS = 5000;
@@ -512,7 +522,17 @@ static void showTop(const lv_img_dsc_t* icon, const char* text, bool frost) {
   lv_obj_clear_flag(topLbl, LV_OBJ_FLAG_HIDDEN);
 }
 
+static void setLink(LinkIcon& link, bool up) {
+  if (link.shown == (int)up) return;
+  link.shown = up;
+  lv_obj_set_style_opa(lv_obj_get_child(link.box, 0), up ? LV_OPA_COVER : LV_OPA_50, 0);
+  if (up) lv_obj_add_flag(link.cross, LV_OBJ_FLAG_HIDDEN);
+  else lv_obj_clear_flag(link.cross, LV_OBJ_FLAG_HIDDEN);
+}
+
 static void refreshTop() {
+  setLink(btLink, g_live.state == OBD_CONNECTED || g_live.state == OBD_LIVE);
+  setLink(wifiLink, WiFi.isConnected());
   if (updaterReady() && lv_obj_has_flag(readyBadge, LV_OBJ_FLAG_HIDDEN)) {
     lv_obj_clear_flag(readyBadge, LV_OBJ_FLAG_HIDDEN);
     Log.printf("Update: %s is waiting, restart to run it\n", updaterReady());
@@ -1323,17 +1343,37 @@ static bool isBetaBuild() {
   return b && b[1] >= '0' && b[1] <= '9';
 }
 
+static LinkIcon makeLink(lv_obj_t* parent, const char* symbol) {
+  LinkIcon link = {nullptr, nullptr, -1};
+  link.box = lv_obj_create(parent);
+  lv_obj_remove_style_all(link.box);
+  lv_obj_set_size(link.box, 20, 20);
+  lv_obj_clear_flag(link.box, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
+  lv_obj_t* glyph = makeLabel(link.box, &lv_font_montserrat_16, LAVENDER, 0, 0, LV_SIZE_CONTENT, LV_TEXT_ALIGN_CENTER);
+  lv_label_set_text(glyph, symbol);
+  lv_obj_center(glyph);
+  link.cross = lv_line_create(link.box);
+  lv_line_set_points(link.cross, CROSS_POINTS, 2);
+  lv_obj_set_style_line_width(link.cross, 2, 0);
+  lv_obj_set_style_line_rounded(link.cross, true, 0);
+  lv_obj_set_style_line_color(link.cross, lv_color_hex(CROSS_COLOUR), 0);
+  lv_obj_set_pos(link.cross, 0, 0);
+  return link;
+}
+
 static void buildChrome(lv_obj_t* scr) {
   statusLbl = makeLabel(scr, &lv_font_montserrat_20, lv_color_hex(0xFFFFFF), 0, 60, SCREEN, LV_TEXT_ALIGN_CENTER);
   lv_label_set_text(statusLbl, "");
   lv_obj_t* row = lv_obj_create(scr);
   lv_obj_remove_style_all(row);
-  lv_obj_set_size(row, 220, 26);
-  lv_obj_set_pos(row, (SCREEN - 220) / 2, 32);
+  lv_obj_set_size(row, 250, 26);
+  lv_obj_set_pos(row, (SCREEN - 250) / 2, 32);
   lv_obj_clear_flag(row, (lv_obj_flag_t)(LV_OBJ_FLAG_CLICKABLE | LV_OBJ_FLAG_SCROLLABLE));
   lv_obj_set_flex_flow(row, LV_FLEX_FLOW_ROW);
   lv_obj_set_flex_align(row, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER, LV_FLEX_ALIGN_CENTER);
   lv_obj_set_style_pad_column(row, 6, 0);
+  btLink = makeLink(row, LV_SYMBOL_BLUETOOTH);
+  wifiLink = makeLink(row, LV_SYMBOL_WIFI);
   if (isBetaBuild()) {
     lv_obj_t* badge = lv_obj_create(row);
     lv_obj_remove_style_all(badge);
